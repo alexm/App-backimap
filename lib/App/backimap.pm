@@ -13,7 +13,7 @@ sub new {
     my ( $class, @argv ) = @_;
 
     my %opt;
-    $opt{args} = \@argv;
+    $opt{'args'} = \@argv;
 
     return bless \%opt, $class;
 }
@@ -21,21 +21,21 @@ sub new {
 sub run {
     my ($self) = @_;
 
-    my ($str) = @{ $self->{args} };
+    my ($str) = @{ $self->{'args'} };
 
     my $uri = URI->new($str);
     my $imap_cfg = imap_uri_split($uri);
     dump $imap_cfg;
 
-    $imap_cfg->{password} = prompt('Password: ', -te => '*' )
-        unless defined $imap_cfg->{password};
+    $imap_cfg->{'password'} = prompt('Password: ', -te => '*' )
+        unless defined $imap_cfg->{'password'};
 
     my $imap = Mail::IMAPClient->new(
-        Server   => $imap_cfg->{host},
-        Port     => $imap_cfg->{port},
-        Ssl      => $imap_cfg->{secure},
-        User     => $imap_cfg->{user},
-        Password => $imap_cfg->{password},
+        Server   => $imap_cfg->{'host'},
+        Port     => $imap_cfg->{'port'},
+        Ssl      => $imap_cfg->{'secure'},
+        User     => $imap_cfg->{'user'},
+        Password => $imap_cfg->{'password'},
 
         # enable imap uid per folder
         Uid => 1,
@@ -47,8 +47,8 @@ sub run {
         next unless defined $count;
 
         my $unseen = $imap->unseen_count($f);
-        $folder{$f}{count}  = $count;
-        $folder{$f}{unseen} = $unseen;
+        $folder{$f}{'count'}  = $count;
+        $folder{$f}{'unseen'} = $unseen;
     }
     dump \%folder;
 
