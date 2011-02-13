@@ -1,0 +1,10 @@
+#!perl
+
+use strict;
+
+require App::backimap;
+
+my $app = App::backimap->new(@ARGV);
+$app->run();
+
+__END__
