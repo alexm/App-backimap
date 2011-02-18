@@ -1,13 +1,20 @@
 package App::backimap;
 # ABSTRACT: backups imap mail
 
-use Modern::Perl;
+use strict;
+use warnings;
 
 use URI;
 use App::backimap::Utils qw( imap_uri_split );
 use Data::Dump           qw( dump );
 use IO::Prompt           qw( prompt );
 use Mail::IMAPClient;
+
+=method new
+
+Creates a new program instance with command line arguments.
+
+=cut
 
 sub new {
     my ( $class, @argv ) = @_;
@@ -17,6 +24,12 @@ sub new {
 
     return bless \%opt, $class;
 }
+
+=method run
+
+Parses command line arguments and starts the program.
+
+=cut
 
 sub run {
     my ($self) = @_;

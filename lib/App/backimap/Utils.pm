@@ -1,7 +1,8 @@
 package App::backimap::Utils;
 # ABSTRACT: backimap utilities
 
-use Modern::Perl;
+use strict;
+use warnings;
 
 use Exporter qw( import );
 
@@ -10,6 +11,23 @@ use URI::imaps ();
 
 our @EXPORT_OK = qw( imap_uri_split );
 
+=func imap_uri_split
+
+This function takes an L<URI::imap> or L<URI::imaps> object
+and returns its information on a hash reference with these keys
+(undefined values may occur):
+
+=for :list
+* host
+* port
+* secure
+* user
+* password
+
+It raises an exception otherwise.
+
+=cut
+
 sub imap_uri_split {
     my ($uri) = @_;
 
@@ -17,7 +35,8 @@ sub imap_uri_split {
         unless ref $uri &&
             ( $uri->isa('URI::imap') || $uri->isa('URI::imaps') );
 
-    my ( $user, $password ) = split /:/, $uri->userinfo
+    my ( $user, $password );
+    ( $user, $password ) = split /:/, $uri->userinfo
         if defined $uri->userinfo;
 
     return {
