@@ -12,3 +12,11 @@ my $app = App::backimap->new(@ARGV);
 $app->run();
 
 __END__
+
+=head1 SYNOPSIS
+
+    backimap imaps://user.name@gmail.com@imap.gmail.com/INBOX
+    
+    backimap [-h|--help]
+
+=cut
