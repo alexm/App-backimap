@@ -23,6 +23,7 @@ and returns its information on a hash reference with these keys
 * secure
 * user
 * password
+* path
 
 It raises an exception otherwise.
 
@@ -45,6 +46,7 @@ sub imap_uri_split {
         secure   => $uri->secure,
         user     => $user,
         password => $password,
+        path     => $uri->path,
     };
 }
 

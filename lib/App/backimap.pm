@@ -54,16 +54,21 @@ sub run {
         Uid => 1,
     );
 
-    my %folder;
-    for my $f ($imap->folders) {
+    my $path = $imap_cfg->{'path'};
+    $path =~ s#^/+##;
+
+    my @folders = $path ne '' ? $path : $imap->folders;
+
+    my %count_for;
+    for my $f (@folders) {
         my $count  = $imap->message_count($f);
         next unless defined $count;
 
         my $unseen = $imap->unseen_count($f);
-        $folder{$f}{'count'}  = $count;
-        $folder{$f}{'unseen'} = $unseen;
+        $count_for{$f}{'count'}  = $count;
+        $count_for{$f}{'unseen'} = $unseen;
     }
-    dump \%folder;
+    dump \%count_for;
 
     $imap->logout;
 }

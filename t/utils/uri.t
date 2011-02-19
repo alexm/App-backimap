@@ -15,6 +15,7 @@ my %test_case = (
         password => undef,
         host => undef,
         port => 143,
+        path => '',
     },
 
     'imaps:' => {
@@ -23,6 +24,7 @@ my %test_case = (
         password => undef,
         host => undef,
         port => 993,
+        path => '',
     },
 
     'imap://server.example.com' => {
@@ -31,6 +33,7 @@ my %test_case = (
         password => undef,
         host   => 'server.example.com',
         port => 143,
+        path => '',
     },
 
     'imaps://server.example.com' => {
@@ -39,6 +42,7 @@ my %test_case = (
         password => undef,
         host   => 'server.example.com',
         port => 993,
+        path => '',
     },
 
     'imap://user@example.com@server.example.com' => {
@@ -47,6 +51,7 @@ my %test_case = (
         password => undef,
         host   => 'server.example.com',
         port => 143,
+        path => '',
     },
 
     'imaps://user@example.com@server.example.com' => {
@@ -55,6 +60,7 @@ my %test_case = (
         password => undef,
         host   => 'server.example.com',
         port => 993,
+        path => '',
     },
 
     'imap://user@example.com:password@server.example.com' => {
@@ -63,6 +69,7 @@ my %test_case = (
         password => 'password',
         host   => 'server.example.com',
         port => 143,
+        path => '',
     },
 
     'imaps://user@example.com:password@server.example.com' => {
@@ -71,6 +78,25 @@ my %test_case = (
         password => 'password',
         host   => 'server.example.com',
         port => 993,
+        path => '',
+    },
+
+    'imap://user@example.com:password@server.example.com/foo/bar' => {
+        secure => 0,
+        user   => 'user@example.com',
+        password => 'password',
+        host   => 'server.example.com',
+        port => 143,
+        path => '/foo/bar',
+    },
+
+    'imaps://user@example.com:password@server.example.com/foo/bar' => {
+        secure => 1,
+        user   => 'user@example.com',
+        password => 'password',
+        host   => 'server.example.com',
+        port => 993,
+        path => '/foo/bar',
     },
 );
 
