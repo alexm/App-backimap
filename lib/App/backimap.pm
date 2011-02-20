@@ -93,6 +93,17 @@ sub run {
     }
     dump \%count_for;
 
+    $imap->select("INBOX");
+
+    my ($msg) = $imap->messages;
+    if ( defined $msg ) {
+        my $fetch = $imap->fetch( $msg, 'RFC822' );
+
+        open my $file, ">", "$msg.txt" or die "message $msg: $!";
+        print $file $fetch->[2];
+        close $file;
+    }
+
     $imap->logout;
 }
 
