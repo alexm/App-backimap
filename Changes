@@ -1,3 +1,9 @@
+0.02    2011-02-20
+
+ - Enable developer tests when available.
+ - Add usage information.
+ - Save INBOX messages into an existing Git repository.
+
 0.01    2011-02-13
 
  - Show new and total number of messages per imap folder.
