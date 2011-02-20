@@ -18,6 +18,9 @@ use App::backimap::Utils qw( imap_uri_split );
 use Data::Dump           qw( dump );
 use IO::Prompt           qw( prompt );
 use Mail::IMAPClient;
+use File::Spec::Functions qw( catfile );
+use File::Path            qw( mkpath );
+use Git::Wrapper;
 
 =method new
 
@@ -30,6 +33,7 @@ sub new {
 
     my %opt = (
         help => 0,
+        dir  => "$ENV{HOME}/.backimap",
     );
 
     GetOptionsFromArray(
@@ -37,6 +41,7 @@ sub new {
         \%opt,
 
         'help|h',
+        'dir=s',
     )
         or __PACKAGE__->usage();
 
@@ -97,16 +102,30 @@ sub run {
     }
     dump \%count_for;
 
-    $imap->select("INBOX");
+    my $dir = $self->{'dir'};
+    my $git = Git::Wrapper->new($dir);
 
-    my ($msg) = $imap->messages;
-    if ( defined $msg ) {
+    my $folder = catfile(
+        $dir,
+        $imap_cfg->{'host'},
+        $imap_cfg->{'user'},
+        'INBOX',
+    );
+    mkpath($folder);
+    chdir $folder;
+
+    $imap->select("INBOX");
+    for my $msg ( $imap->messages ) {
         my $fetch = $imap->fetch( $msg, 'RFC822' );
 
-        open my $file, ">", "$msg.txt" or die "message $msg: $!";
+        open my $file, ">", $msg or die "message $msg: $!";
         print $file $fetch->[2];
         close $file;
+
+        $git->add( catfile( $folder, $msg ) );
     }
+
+    $git->commit({ all => 1, message => 'commit message' });
 
     $imap->logout;
 }
