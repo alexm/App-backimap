@@ -66,6 +66,10 @@ sub run {
     $imap_cfg->{'password'} = prompt('Password: ', -te => '*' )
         unless defined $imap_cfg->{'password'};
 
+    # make sure we can make a secure connection
+    require IO::Socket::SSL
+        if $imap_cfg->{'secure'};
+
     my $imap = Mail::IMAPClient->new(
         Server   => $imap_cfg->{'host'},
         Port     => $imap_cfg->{'port'},
