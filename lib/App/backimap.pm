@@ -131,8 +131,8 @@ sub run {
 
     print $status JSON::Any->encode({
         timestamp => $^T,
-        server    => \$imap_cfg->{'host'},
-        user      => \$imap_cfg->{'user'},
+        server    => $imap_cfg->{'host'},
+        user      => $imap_cfg->{'user'},
         counters  => \%count_for,
     });
 
