@@ -84,7 +84,8 @@ sub run {
 
         # enable imap uid per folder
         Uid => 1,
-    );
+    )
+        or die "cannot establish connection: $@\n";
 
     my $dir = $self->{'dir'};
     my $git = Git::Wrapper->new($dir);
@@ -107,7 +108,7 @@ sub run {
         mkpath( $local_folder );
         chdir $local_folder;
 
-        $imap->select($f);
+        $imap->examine($f);
         for my $msg ( $imap->messages ) {
             next if -f $msg;
 
