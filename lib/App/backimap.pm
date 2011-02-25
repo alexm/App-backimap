@@ -86,6 +86,9 @@ sub run {
         Uid => 1,
     );
 
+    my $dir = $self->{'dir'};
+    my $git = Git::Wrapper->new($dir);
+
     my $path = $imap_cfg->{'path'};
     $path =~ s#^/+##;
 
@@ -99,33 +102,27 @@ sub run {
         my $unseen = $imap->unseen_count($f);
         $count_for{$f}{'count'}  = $count;
         $count_for{$f}{'unseen'} = $unseen;
+
+        my $local_folder = catfile( $dir, $f );
+        mkpath( $local_folder );
+        chdir $local_folder;
+
+        $imap->select($f);
+        for my $msg ( $imap->messages ) {
+            next if -f $msg;
+
+            my $fetch = $imap->fetch( $msg, 'RFC822' );
+
+            open my $file, ">", $msg or die "message $msg: $!";
+            print $file $fetch->[2];
+            close $file;
+
+            $git->add( catfile( $local_folder, $msg ) );
+        }
+
+        eval { $git->commit({ all => 1, message => "save messages from $f" }) };
     }
     dump \%count_for;
-
-    my $dir = $self->{'dir'};
-    my $git = Git::Wrapper->new($dir);
-
-    my $folder = catfile(
-        $dir,
-        $imap_cfg->{'host'},
-        $imap_cfg->{'user'},
-        'INBOX',
-    );
-    mkpath($folder);
-    chdir $folder;
-
-    $imap->select("INBOX");
-    for my $msg ( $imap->messages ) {
-        my $fetch = $imap->fetch( $msg, 'RFC822' );
-
-        open my $file, ">", $msg or die "message $msg: $!";
-        print $file $fetch->[2];
-        close $file;
-
-        $git->add( catfile( $folder, $msg ) );
-    }
-
-    $git->commit({ all => 1, message => 'commit message' });
 
     $imap->logout;
 }
