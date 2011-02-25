@@ -149,6 +149,9 @@ sub run {
 
     close $status;
 
+    $git->add($filename);
+    $git->commit({ all => 1, message => "save status" });
+
     my $spent = ( time - $^T ) / 60;
     printf STDERR "Backup took %.2f minutes.\n", $spent
         if $self->{'verbose'};
