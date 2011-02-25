@@ -32,8 +32,9 @@ sub new {
     my ( $class, @argv ) = @_;
 
     my %opt = (
-        help => 0,
-        dir  => "$ENV{HOME}/.backimap",
+        help    => 0,
+        verbose => 0,
+        dir     => "$ENV{HOME}/.backimap",
     );
 
     GetOptionsFromArray(
@@ -41,6 +42,7 @@ sub new {
         \%opt,
 
         'help|h',
+        'verbose|v',
         'dir=s',
     )
         or __PACKAGE__->usage();
@@ -94,6 +96,9 @@ sub run {
 
     my @folders = $path ne '' ? $path : $imap->folders;
 
+    print STDERR "Examining folders...\n"
+        if $self->{'verbose'};
+
     my %count_for;
     for my $f (@folders) {
         my $count  = $imap->message_count($f);
@@ -102,6 +107,9 @@ sub run {
         my $unseen = $imap->unseen_count($f);
         $count_for{$f}{'count'}  = $count;
         $count_for{$f}{'unseen'} = $unseen;
+
+        print STDERR " * $f ($unseen/$count)"
+            if $self->{'verbose'};
 
         my $local_folder = catfile( $dir, $f );
         mkpath( $local_folder );
@@ -121,6 +129,9 @@ sub run {
         }
 
         eval { $git->commit({ all => 1, message => "save messages from $f" }) };
+
+        print STDERR "\n"
+            if $self->{'verbose'};
     }
 
     $imap->logout;
@@ -137,6 +148,10 @@ sub run {
     });
 
     close $status;
+
+    my $spent = ( time - $^T ) / 60;
+    printf STDERR "Backup took %.2f minutes.\n", $spent
+        if $self->{'verbose'};
 }
 
 =method usage
