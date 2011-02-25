@@ -19,6 +19,7 @@ __END__
     
     Options:
         --dir PATH   Path to Git repo (default: $HOME/.backimap)
+        --verbose    Enable verbose messages.
         --help|-h    This help message.
 
 =cut
