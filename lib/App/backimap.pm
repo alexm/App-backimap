@@ -15,7 +15,7 @@ use Getopt::Long         qw( GetOptionsFromArray );
 use Pod::Usage;
 use URI;
 use App::backimap::Utils qw( imap_uri_split );
-use Data::Dump           qw( dump );
+use JSON::Any;
 use IO::Prompt           qw( prompt );
 use Mail::IMAPClient;
 use File::Spec::Functions qw( catfile );
@@ -66,7 +66,6 @@ sub run {
 
     my $uri = URI->new($str);
     my $imap_cfg = imap_uri_split($uri);
-    dump $imap_cfg;
 
     $imap_cfg->{'password'} = prompt('Password: ', -te => '*' )
         unless defined $imap_cfg->{'password'};
@@ -123,9 +122,21 @@ sub run {
 
         eval { $git->commit({ all => 1, message => "save messages from $f" }) };
     }
-    dump \%count_for;
 
     $imap->logout;
+
+    my $filename = catfile( $dir, "backimap.json" );
+    open my $status, ">", $filename
+        or die "cannot open $filename: $!\n";
+
+    print $status JSON::Any->encode({
+        timestamp => $^T,
+        server    => \$imap_cfg->{'host'},
+        user      => \$imap_cfg->{'user'},
+        counters  => \%count_for,
+    });
+
+    close $status;
 }
 
 =method usage
