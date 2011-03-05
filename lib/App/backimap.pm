@@ -21,6 +21,7 @@ use Mail::IMAPClient;
 use File::Spec::Functions qw( catfile );
 use File::Path            qw( mkpath );
 use Git::Wrapper;
+use File::HomeDir;
 
 =method new
 
@@ -34,7 +35,8 @@ sub new {
     my %opt = (
         help    => 0,
         verbose => 0,
-        dir     => "$ENV{HOME}/.backimap",
+        dir     => catfile( File::HomeDir->my_home, ".backimap" ),
+        init    => 0,
     );
 
     GetOptionsFromArray(
@@ -44,12 +46,186 @@ sub new {
         'help|h',
         'verbose|v',
         'dir=s',
+        'init',
     )
         or __PACKAGE__->usage();
 
     $opt{'args'} = \@argv;
 
     return bless \%opt, $class;
+}
+
+=method config
+
+Setups configuration and prompts for password if needed.
+
+=cut
+
+sub config {
+    my ( $self, $str ) = @_;
+
+    my $uri = URI->new($str);
+    my $imap_cfg = imap_uri_split($uri);
+
+    $imap_cfg->{'password'} = prompt('Password: ', -te => '*' )
+        unless defined $imap_cfg->{'password'};
+
+    $self->{'status'} = {
+        timestamp => $^T,
+        server    => $imap_cfg->{'host'},
+        user      => $imap_cfg->{'user'},
+    };
+
+    $self->{'config'} = $imap_cfg;
+}
+
+=method login
+
+Connects to IMAP server.
+
+=cut
+
+sub login {
+    my ($self) = @_;
+
+    # make sure we can make a secure connection
+    require IO::Socket::SSL
+        if $self->{'config'}{'secure'};
+
+    $self->{'imap'} = Mail::IMAPClient->new(
+        Server   => $self->{'config'}{'host'},
+        Port     => $self->{'config'}{'port'},
+        Ssl      => $self->{'config'}{'secure'},
+        User     => $self->{'config'}{'user'},
+        Password => $self->{'config'}{'password'},
+
+        # enable imap uid per folder
+        Uid => 1,
+    )
+        or die "cannot establish connection: $@\n";
+}
+
+=method logout
+
+Disconnects from IMAP server.
+
+=cut
+
+sub logout {
+    my ($self) = @_;
+
+    my $imap = $self->{'imap'};
+    $imap->logout()
+        if defined $imap && $imap->isa('Mail::IMAPClient');
+}
+
+=method init
+
+Open Git repository and initialize it if needed.
+
+=cut
+
+sub init {
+    my ($self) = @_;
+
+    $self->{'git'} = Git::Wrapper->new( $self->{'dir'} );
+
+    if ( $self->{'init'} ) {
+        $self->{'git'}->init();
+
+        # save initial status in the Git repository
+        $self->status();
+    }
+}
+
+=method status
+
+Save current status into Git repository.
+
+=cut
+
+sub status {
+    my ($self) = @_;
+
+    my $git = $self->{'git'};
+    die "must init git repo first\n"
+        unless defined $git && $git->isa('Git::Wrapper');
+
+    my $dir = $self->{'dir'};
+    my $filename = catfile( $dir, "backimap.json" );
+    open my $status, ">", $filename
+        or die "cannot open $filename: $!\n";
+
+    print $status JSON::Any->encode( $self->{'status'} );
+    close $status;
+
+    $git->add($filename);
+    $git->commit( $filename, { message => "save status" } );
+}
+
+=method backup
+
+Perform IMAP folder backup recursively into Git repository.
+
+=cut
+
+sub backup {
+    my ($self) = @_;
+
+    my $git = $self->{'git'};
+    die "must init git repo first\n"
+        unless defined $git && $git->isa('Git::Wrapper');
+
+    my $imap = $self->{'imap'};
+    die "imap connection unavailable\n"
+        unless defined $imap && $imap->isa('Mail::IMAPClient');
+
+    my $path = $self->{'config'}{'path'};
+    $path =~ s#^/+##;
+
+    my @folder_list = $path ne '' ? $path : $imap->folders;
+
+    print STDERR "Examining folders...\n"
+        if $self->{'verbose'};
+
+    my %count_for;
+    for my $folder (@folder_list) {
+        my $count  = $imap->message_count($folder);
+        next unless defined $count;
+
+        my $unseen = $imap->unseen_count($folder);
+        $count_for{$folder}{'count'}  = $count;
+        $count_for{$folder}{'unseen'} = $unseen;
+
+        print STDERR " * $folder ($unseen/$count)"
+            if $self->{'verbose'};
+
+        my $local_folder = catfile( $self->{'dir'}, $folder );
+        mkpath( $local_folder );
+        chdir $local_folder;
+
+        $imap->examine($folder);
+        for my $msg ( $imap->messages ) {
+            next if -f $msg;
+
+            my $fetch = $imap->fetch( $msg, 'RFC822' );
+
+            open my $file, ">", $msg
+                or die "message $msg: $!";
+
+            print $file $fetch->[2];
+            close $file;
+
+            $git->add( catfile( $local_folder, $msg ) );
+        }
+
+        eval { $git->commit({ all => 1, message => "save messages from $folder" }) };
+
+        print STDERR "\n"
+            if $self->{'verbose'};
+    }
+
+    $self->{'status'}{'counters'} = \%count_for;
 }
 
 =method run
@@ -64,93 +240,12 @@ sub run {
     my @args = @{ $self->{'args'} };
     $self->usage unless @args == 1;
 
-    my ($str) = @args;
-
-    my $uri = URI->new($str);
-    my $imap_cfg = imap_uri_split($uri);
-
-    $imap_cfg->{'password'} = prompt('Password: ', -te => '*' )
-        unless defined $imap_cfg->{'password'};
-
-    # make sure we can make a secure connection
-    require IO::Socket::SSL
-        if $imap_cfg->{'secure'};
-
-    my $imap = Mail::IMAPClient->new(
-        Server   => $imap_cfg->{'host'},
-        Port     => $imap_cfg->{'port'},
-        Ssl      => $imap_cfg->{'secure'},
-        User     => $imap_cfg->{'user'},
-        Password => $imap_cfg->{'password'},
-
-        # enable imap uid per folder
-        Uid => 1,
-    )
-        or die "cannot establish connection: $@\n";
-
-    my $dir = $self->{'dir'};
-    my $git = Git::Wrapper->new($dir);
-
-    my $path = $imap_cfg->{'path'};
-    $path =~ s#^/+##;
-
-    my @folders = $path ne '' ? $path : $imap->folders;
-
-    print STDERR "Examining folders...\n"
-        if $self->{'verbose'};
-
-    my %count_for;
-    for my $f (@folders) {
-        my $count  = $imap->message_count($f);
-        next unless defined $count;
-
-        my $unseen = $imap->unseen_count($f);
-        $count_for{$f}{'count'}  = $count;
-        $count_for{$f}{'unseen'} = $unseen;
-
-        print STDERR " * $f ($unseen/$count)"
-            if $self->{'verbose'};
-
-        my $local_folder = catfile( $dir, $f );
-        mkpath( $local_folder );
-        chdir $local_folder;
-
-        $imap->examine($f);
-        for my $msg ( $imap->messages ) {
-            next if -f $msg;
-
-            my $fetch = $imap->fetch( $msg, 'RFC822' );
-
-            open my $file, ">", $msg or die "message $msg: $!";
-            print $file $fetch->[2];
-            close $file;
-
-            $git->add( catfile( $local_folder, $msg ) );
-        }
-
-        eval { $git->commit({ all => 1, message => "save messages from $f" }) };
-
-        print STDERR "\n"
-            if $self->{'verbose'};
-    }
-
-    $imap->logout;
-
-    my $filename = catfile( $dir, "backimap.json" );
-    open my $status, ">", $filename
-        or die "cannot open $filename: $!\n";
-
-    print $status JSON::Any->encode({
-        timestamp => $^T,
-        server    => $imap_cfg->{'host'},
-        user      => $imap_cfg->{'user'},
-        counters  => \%count_for,
-    });
-
-    close $status;
-
-    $git->add($filename);
-    $git->commit({ all => 1, message => "save status" });
+    $self->config(@args);
+    $self->init();
+    $self->login();
+    $self->backup();
+    $self->logout();
+    $self->status();
 
     my $spent = ( time - $^T ) / 60;
     printf STDERR "Backup took %.2f minutes.\n", $spent

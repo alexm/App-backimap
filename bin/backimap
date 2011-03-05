@@ -18,6 +18,7 @@ __END__
     backimap imaps://user.name@gmail.com@imap.gmail.com/INBOX
     
     Options:
+        --init       Initialize Git repo and setup backimap status.
         --dir PATH   Path to Git repo (default: $HOME/.backimap)
         --verbose    Enable verbose messages.
         --help|-h    This help message.
