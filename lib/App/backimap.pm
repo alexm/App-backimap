@@ -22,6 +22,7 @@ use File::Spec::Functions qw( catfile );
 use File::Path            qw( mkpath );
 use Git::Wrapper;
 use File::HomeDir;
+use Carp;
 
 =method new
 
@@ -119,23 +120,43 @@ sub logout {
         if defined $imap && $imap->isa('Mail::IMAPClient');
 }
 
-=method init
+=method setup
 
-Open Git repository and initialize it if needed.
+Open Git repository (initialize if needed) and load status.
 
 =cut
 
-sub init {
+sub setup {
     my ($self) = @_;
 
-    $self->{'git'} = Git::Wrapper->new( $self->{'dir'} );
+    my $dir = $self->{'dir'};
+    my $filename = catfile( $dir, "backimap.json" );
+    my $git = Git::Wrapper->new($dir);
 
     if ( $self->{'init'} ) {
-        $self->{'git'}->init();
+        die "directory $dir already initialized\n"
+            if -f $filename || -d catfile( $dir, ".git" );
+
+        $git->init();
 
         # save initial status in the Git repository
         $self->status();
     }
+
+    open my $status, "<", $filename
+        or die "cannot open $filename: $!\n";
+
+    # slurp file
+    my $json = do { local $/; <$status> };
+    close $status;
+
+    my $config = JSON::Any->decode($json);
+
+    die "imap details do not match with previous status\n"
+        if $config->{'user'} ne $self->{'status'}{'user'} ||
+            $config->{'server'} ne $self->{'status'}{'server'};
+
+    $self->{'git'} = $git;
 }
 
 =method status
@@ -148,8 +169,11 @@ sub status {
     my ($self) = @_;
 
     my $git = $self->{'git'};
-    die "must init git repo first\n"
+    croak "must setup git repo first"
         unless defined $git && $git->isa('Git::Wrapper');
+
+    croak "must define status first"
+        unless defined $self->{'status'};
 
     my $dir = $self->{'dir'};
     my $filename = catfile( $dir, "backimap.json" );
@@ -173,11 +197,11 @@ sub backup {
     my ($self) = @_;
 
     my $git = $self->{'git'};
-    die "must init git repo first\n"
+    croak "must init git repo first"
         unless defined $git && $git->isa('Git::Wrapper');
 
     my $imap = $self->{'imap'};
-    die "imap connection unavailable\n"
+    croak "imap connection unavailable"
         unless defined $imap && $imap->isa('Mail::IMAPClient');
 
     my $path = $self->{'config'}{'path'};
@@ -241,7 +265,7 @@ sub run {
     $self->usage unless @args == 1;
 
     $self->config(@args);
-    $self->init();
+    $self->setup();
     $self->login();
     $self->backup();
     $self->logout();
