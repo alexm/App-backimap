@@ -132,6 +132,7 @@ sub setup {
     my $dir = $self->{'dir'};
     my $filename = catfile( $dir, "backimap.json" );
     my $git = Git::Wrapper->new($dir);
+    $self->{'git'} = $git;
 
     if ( $self->{'init'} ) {
         die "directory $dir already initialized\n"
@@ -151,12 +152,9 @@ sub setup {
     close $status;
 
     my $config = JSON::Any->decode($json);
-
     die "imap details do not match with previous status\n"
         if $config->{'user'} ne $self->{'status'}{'user'} ||
             $config->{'server'} ne $self->{'status'}{'server'};
-
-    $self->{'git'} = $git;
 }
 
 =method status
