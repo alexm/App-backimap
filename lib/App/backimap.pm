@@ -182,7 +182,7 @@ sub status {
     close $status;
 
     $git->add($filename);
-    $git->commit( $filename, { message => "save status" } );
+    $git->commit( { message => "save status" }, $filename );
 }
 
 =method backup
