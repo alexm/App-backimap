@@ -219,8 +219,8 @@ sub backup {
         next unless defined $count;
 
         my $unseen = $imap->unseen_count($folder);
-        $status->{$folder}{'count'}  = $count;
-        $status->{$folder}{'unseen'} = $unseen;
+        $status->{'count'}  = $count;
+        $status->{'unseen'} = $unseen;
 
         print STDERR " * $folder ($unseen/$count)"
             if $self->{'verbose'};
