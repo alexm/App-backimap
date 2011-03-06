@@ -144,19 +144,19 @@ sub setup {
         $self->status();
     }
 
-    open my $status, "<", $filename
+    open my $file, "<", $filename
         or die "cannot open $filename: $!\n";
 
     # slurp file
-    my $json = do { local $/; <$status> };
-    close $status;
+    my $json = do { local $/; <$file> };
+    close $file;
 
-    my $config = JSON::Any->decode($json);
+    my $status = JSON::Any->decode($json);
     die "imap details do not match with previous status\n"
-        if $config->{'user'} ne $self->{'status'}{'user'} ||
-            $config->{'server'} ne $self->{'status'}{'server'};
+        if $status->{'user'} ne $self->{'status'}{'user'} ||
+            $status->{'server'} ne $self->{'status'}{'server'};
 
-    $self->{'status'}{'folder'} = $config->{'folder'};
+    $self->{'status'}{'folder'} = $status->{'folder'};
 }
 
 =method status
@@ -177,11 +177,11 @@ sub status {
 
     my $dir = $self->{'dir'};
     my $filename = catfile( $dir, "backimap.json" );
-    open my $status, ">", $filename
+    open my $file, ">", $filename
         or die "cannot open $filename: $!\n";
 
-    print $status JSON::Any->encode( $self->{'status'} );
-    close $status;
+    print $file JSON::Any->encode( $self->{'status'} );
+    close $file;
 
     $git->add($filename);
     $git->commit( { message => "save status" }, $filename );
