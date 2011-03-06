@@ -122,7 +122,7 @@ sub logout {
 
 =method setup
 
-Open Git repository (initialize if needed) and load status.
+Open Git repository (initialize if asked) and load previous status.
 
 =cut
 
@@ -155,6 +155,8 @@ sub setup {
     die "imap details do not match with previous status\n"
         if $config->{'user'} ne $self->{'status'}{'user'} ||
             $config->{'server'} ne $self->{'status'}{'server'};
+
+    $self->{'status'}{'folder'} = $config->{'folder'};
 }
 
 =method status
@@ -210,14 +212,15 @@ sub backup {
     print STDERR "Examining folders...\n"
         if $self->{'verbose'};
 
-    my %count_for;
     for my $folder (@folder_list) {
+        my $status = ( $self->{'status'}{'folder'}{$folder} ||= {} );
+
         my $count  = $imap->message_count($folder);
         next unless defined $count;
 
         my $unseen = $imap->unseen_count($folder);
-        $count_for{$folder}{'count'}  = $count;
-        $count_for{$folder}{'unseen'} = $unseen;
+        $status->{$folder}{'count'}  = $count;
+        $status->{$folder}{'unseen'} = $unseen;
 
         print STDERR " * $folder ($unseen/$count)"
             if $self->{'verbose'};
@@ -246,8 +249,6 @@ sub backup {
         print STDERR "\n"
             if $self->{'verbose'};
     }
-
-    $self->{'status'}{'counters'} = \%count_for;
 }
 
 =method run
