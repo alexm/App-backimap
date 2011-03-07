@@ -1,3 +1,8 @@
+0.04    2011-03-06
+
+ - Add option to initialize directory.
+ - Check previous status before starting backup.
+
 0.03    2011-02-25
 
  - Save messages from all folders recursively.
