@@ -1,22 +1,22 @@
-0.04    2011-03-06
+0.00_04    2011-03-06
 
  - Add option to initialize directory.
  - Check previous status before starting backup.
 
-0.03    2011-02-25
+0.00_03    2011-02-25
 
  - Save messages from all folders recursively.
  - Skip already existing messages.
  - Save application status in JSON.
  - Add verbose option.
 
-0.02    2011-02-20
+0.00_02    2011-02-20
 
  - Enable developer tests when available.
  - Add usage information.
  - Save INBOX messages into an existing Git repository.
 
-0.01    2011-02-13
+0.00_01    2011-02-13
 
  - Show new and total number of messages per imap folder.
  - Initial release.
