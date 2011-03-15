@@ -1,3 +1,8 @@
+0.00_05    2011-03-15
+
+ - Refactor status to a Moose attribute with serialization.
+ - Make the whole directory path on init.
+
 0.00_04    2011-03-06
 
  - Add option to initialize directory.
