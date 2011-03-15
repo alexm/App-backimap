@@ -11,11 +11,19 @@ package App::backimap;
 use strict;
 use warnings;
 
+use Moose;
+use App::backimap::Status;
+use App::backimap::Status::Folder;
+
+has status => (
+    is => 'rw',
+    isa => 'App::backimap::Status',
+);
+
 use Getopt::Long         qw( GetOptionsFromArray );
 use Pod::Usage;
 use URI;
 use App::backimap::Utils qw( imap_uri_split );
-use JSON::Any;
 use IO::Prompt           qw( prompt );
 use Mail::IMAPClient;
 use File::Spec::Functions qw( catfile );
@@ -71,11 +79,12 @@ sub config {
     $imap_cfg->{'password'} = prompt('Password: ', -te => '*' )
         unless defined $imap_cfg->{'password'};
 
-    $self->{'status'} = {
-        timestamp => $^T,
-        server    => $imap_cfg->{'host'},
-        user      => $imap_cfg->{'user'},
-    };
+    $self->status(
+        App::backimap::Status->new(
+            server    => $imap_cfg->{'host'},
+            user      => $imap_cfg->{'user'},
+        )
+    );
 
     $self->{'config'} = $imap_cfg;
 }
@@ -138,34 +147,30 @@ sub setup {
         die "directory $dir already initialized\n"
             if -f $filename || -d catfile( $dir, ".git" );
 
+        mkpath($dir);
         $git->init();
 
         # save initial status in the Git repository
-        $self->status();
+        $self->save();
     }
 
-    open my $file, "<", $filename
-        or die "cannot open $filename: $!\n";
+    my $status = App::backimap::Status->load($filename);
 
-    # slurp file
-    my $json = do { local $/; <$file> };
-    close $file;
-
-    my $status = JSON::Any->decode($json);
     die "imap details do not match with previous status\n"
-        if $status->{'user'} ne $self->{'status'}{'user'} ||
-            $status->{'server'} ne $self->{'status'}{'server'};
+        if $status->user ne $self->status->user ||
+            $status->server ne $self->status->server;
 
-    $self->{'status'}{'folder'} = $status->{'folder'};
+    $self->status->folder( $status->folder )
+        if $status->folder;
 }
 
-=method status
+=method save
 
 Save current status into Git repository.
 
 =cut
 
-sub status {
+sub save {
     my ($self) = @_;
 
     my $git = $self->{'git'};
@@ -173,15 +178,12 @@ sub status {
         unless defined $git && $git->isa('Git::Wrapper');
 
     croak "must define status first"
-        unless defined $self->{'status'};
+        unless defined $self->status;
 
     my $dir = $self->{'dir'};
     my $filename = catfile( $dir, "backimap.json" );
-    open my $file, ">", $filename
-        or die "cannot open $filename: $!\n";
 
-    print $file JSON::Any->encode( $self->{'status'} );
-    close $file;
+    $self->status->store($filename);
 
     $git->add($filename);
     $git->commit( { message => "save status" }, $filename );
@@ -213,14 +215,25 @@ sub backup {
         if $self->{'verbose'};
 
     for my $folder (@folder_list) {
-        my $status = ( $self->{'status'}{'folder'}{$folder} ||= {} );
-
         my $count  = $imap->message_count($folder);
         next unless defined $count;
 
         my $unseen = $imap->unseen_count($folder);
-        $status->{'count'}  = $count;
-        $status->{'unseen'} = $unseen;
+
+        if ( $self->status->folder ) {
+            $self->status->folder->{$folder}->count($count);
+            $self->status->folder->{$folder}->unseen($unseen);
+        }
+        else {
+            my %status = (
+                $folder => App::backimap::Status::Folder->new(
+                    count => $count,
+                    unseen => $unseen,
+                ),
+            );
+
+            $self->status->folder(\%status);
+        }
 
         print STDERR " * $folder ($unseen/$count)"
             if $self->{'verbose'};
@@ -268,7 +281,7 @@ sub run {
     $self->login();
     $self->backup();
     $self->logout();
-    $self->status();
+    $self->save();
 
     my $spent = ( time - $^T ) / 60;
     printf STDERR "Backup took %.2f minutes.\n", $spent
