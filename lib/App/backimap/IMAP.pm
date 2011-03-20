@@ -103,8 +103,10 @@ has password => (
     default => sub {
         my $self = shift;
 
-        my $password = ( split /:/, $self->uri->userinfo )[1]
-            // "" . IO::Prompt::prompt( 'Password: ', -te => '*' );
+        my $password = ( split /:/, $self->uri->userinfo )[1];
+        # note that return value must be stringified, hence the .= op
+        $password .= IO::Prompt::prompt( 'Password: ', -te => '*' )
+            unless defined $password;
 
         return $password;
     },
