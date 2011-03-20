@@ -14,18 +14,21 @@ use warnings;
 use Moose;
 use App::backimap::Status;
 use App::backimap::Status::Folder;
+use App::backimap::IMAP;
 
 has status => (
     is => 'rw',
     isa => 'App::backimap::Status',
 );
 
+has imap => (
+    is => 'rw',
+    isa => 'App::backimap::IMAP',
+);
+
 use Getopt::Long         qw( GetOptionsFromArray );
 use Pod::Usage;
 use URI;
-use App::backimap::Utils qw( imap_uri_split );
-use IO::Prompt           qw( prompt );
-use Mail::IMAPClient;
 use File::Spec::Functions qw( catfile );
 use File::Path            qw( mkpath );
 use Git::Wrapper;
@@ -64,79 +67,29 @@ sub new {
     return bless \%opt, $class;
 }
 
-=method config
-
-Setups configuration and prompts for password if needed.
-
-=cut
-
-sub config {
-    my ( $self, $str ) = @_;
-
-    my $uri = URI->new($str);
-    my $imap_cfg = imap_uri_split($uri);
-
-    $imap_cfg->{'password'} = prompt('Password: ', -te => '*' )
-        unless defined $imap_cfg->{'password'};
-
-    $self->status(
-        App::backimap::Status->new(
-            server    => $imap_cfg->{'host'},
-            user      => $imap_cfg->{'user'},
-        )
-    );
-
-    $self->{'config'} = $imap_cfg;
-}
-
-=method login
-
-Connects to IMAP server.
-
-=cut
-
-sub login {
-    my ($self) = @_;
-
-    # make sure we can make a secure connection
-    require IO::Socket::SSL
-        if $self->{'config'}{'secure'};
-
-    $self->{'imap'} = Mail::IMAPClient->new(
-        Server   => $self->{'config'}{'host'},
-        Port     => $self->{'config'}{'port'},
-        Ssl      => $self->{'config'}{'secure'},
-        User     => $self->{'config'}{'user'},
-        Password => $self->{'config'}{'password'},
-
-        # enable imap uid per folder
-        Uid => 1,
-    )
-        or die "cannot establish connection: $@\n";
-}
-
-=method logout
-
-Disconnects from IMAP server.
-
-=cut
-
-sub logout {
-    my ($self) = @_;
-
-    my $imap = $self->{'imap'};
-    $imap->logout()
-        if defined $imap && $imap->isa('Mail::IMAPClient');
-}
-
 =method setup
 
-Open Git repository (initialize if asked) and load previous status.
+Setups configuration and prompts for password if needed.
+Then opens Git repository (initialize if asked) and
+load previous status.
 
 =cut
 
 sub setup {
-    my ($self) = @_;
+    my ( $self, $str ) = @_;
+
+    my $uri = URI->new($str);
+
+    $self->imap(
+        App::backimap::IMAP->new( uri => $uri )
+    );
+
+    $self->status(
+        App::backimap::Status->new(
+            server    => $self->imap->host,
+            user      => $self->imap->user,
+        )
+    );
 
     my $dir = $self->{'dir'};
     my $filename = catfile( $dir, "backimap.json" );
@@ -202,11 +155,9 @@ sub backup {
     croak "must init git repo first"
         unless defined $git && $git->isa('Git::Wrapper');
 
-    my $imap = $self->{'imap'};
-    croak "imap connection unavailable"
-        unless defined $imap && $imap->isa('Mail::IMAPClient');
+    my $imap = $self->imap->client;
 
-    my $path = $self->{'config'}{'path'};
+    my $path = $self->imap->path;
     $path =~ s#^/+##;
 
     my @folder_list = $path ne '' ? $path : $imap->folders;
@@ -276,11 +227,8 @@ sub run {
     my @args = @{ $self->{'args'} };
     $self->usage unless @args == 1;
 
-    $self->config(@args);
-    $self->setup();
-    $self->login();
+    $self->setup(@args);
     $self->backup();
-    $self->logout();
     $self->save();
 
     my $spent = ( time - $^T ) / 60;
