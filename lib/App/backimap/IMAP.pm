@@ -4,6 +4,7 @@ package App::backimap::IMAP;
 use Moose;
 use Moose::Util::TypeConstraints;
 use IO::Prompt();
+use Mail::IMAPClient();
 
 use 5.010;
 
@@ -20,7 +21,7 @@ subtype 'URI::imaps' => as Object => where { $_->isa('URI::imaps') };
 
 has uri => (
     is => 'ro',
-    isa => 'App::backimap::Types::URI',
+    isa => 'URI::imap | URI::imaps',
     required => 1,
 );
 
@@ -103,7 +104,7 @@ has password => (
         my $self = shift;
 
         my $password = ( split /:/, $self->uri->userinfo )[1]
-            // IO::Prompt::prompt( 'Password: ', -te => '*' );
+            // "" . IO::Prompt::prompt( 'Password: ', -te => '*' );
 
         return $password;
     },
