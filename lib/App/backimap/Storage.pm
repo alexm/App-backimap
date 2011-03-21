@@ -3,8 +3,7 @@ package App::backimap::Storage;
 
 use Moose;
 use Moose::Util::TypeConstraints;
-use Path::Class::Dir();
-use Path::Class::File();
+use MooseX::Types::Path::Class;
 use File::chdir;
 
 =attr dir
@@ -15,8 +14,9 @@ Sets pathname to the storage.
 
 has dir => (
     is => 'ro',
-    isa => 'Str',
+    isa => 'Path::Class::Dir',
     required => 1,
+    coerce => 1,
 );
 
 has init => (
@@ -34,7 +34,7 @@ has _git => (
     default => sub {
         my $self = shift;
 
-        my $dir = Path::Class::Dir->new( $self->dir );
+        my $dir = $self->dir;
         my $git = Git::Wrapper->new("$dir");
 
         if ( $self->init ) {
@@ -59,7 +59,7 @@ sub get {
     my $self = shift;
     my ($file) = @_;
 
-    return -f Path::Class::File->new( $self->dir, $file );
+    return -f $self->dir->file($file);
 }
 
 =method put( $change, $file => $content, ... )
@@ -72,10 +72,11 @@ sub put {
     my $self = shift;
     my ( $change, %files ) = @_;
 
-    local $CWD = $self->dir;
+    my $dir = $self->dir;
+    local $CWD = "$dir";
 
     for my $filename ( keys %files ) {
-        my $filepath = Path::Class::File->new( $self->dir, $filename );
+        my $filepath = $dir->file($filename);
         $filepath->dir->mkpath()
             unless -d $filepath->dir;
 
@@ -92,7 +93,7 @@ sub put {
         $self->_git->commit( { message => $change }, keys %files );
     }
     else {
-        $self->_git->add( $self->dir );
+        $self->_git->add("$dir");
         $self->_git->commit( { message => $change, all => 1 } );
     }
 }
