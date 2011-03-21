@@ -18,6 +18,12 @@ has dir => (
     coerce => 1,
 );
 
+=attr init
+
+Tells that storage must be initialized.
+
+=cut
+
 has init => (
     is => 'ro',
     isa => 'Bool',

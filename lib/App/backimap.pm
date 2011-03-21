@@ -17,15 +17,33 @@ use App::backimap::Status::Folder;
 use App::backimap::IMAP;
 use App::backimap::Storage;
 
+=attr status
+
+Application persistent status.
+
+=cut
+
 has status => (
     is => 'rw',
     isa => 'App::backimap::Status',
 );
 
+=attr imap
+
+An object to encapsulate IMAP details.
+
+=cut
+
 has imap => (
     is => 'rw',
     isa => 'App::backimap::IMAP',
 );
+
+=attr storage
+
+Storage backend where files and messages are stored.
+
+=cut
 
 has storage => (
     is => 'rw',
@@ -124,7 +142,8 @@ sub setup {
 
 =method save
 
-Save current status into Git repository.
+Save current status into storage backend.
+Status must be setup before saving is possible.
 
 =cut
 
@@ -140,7 +159,7 @@ sub save {
 
 =method backup
 
-Perform IMAP folder backup recursively into Git repository.
+Perform IMAP folder backup recursively.
 
 =cut
 
