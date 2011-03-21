@@ -35,8 +35,7 @@ has storage => (
 use Getopt::Long         qw( GetOptionsFromArray );
 use Pod::Usage;
 use URI;
-use File::Spec::Functions qw( catfile );
-use File::Path            qw( mkpath );
+use Path::Class qw( dir file );
 use Git::Wrapper;
 use File::HomeDir;
 use Carp;
@@ -53,7 +52,7 @@ sub new {
     my %opt = (
         help    => 0,
         verbose => 0,
-        dir     => catfile( File::HomeDir->my_home, ".backimap" ),
+        dir     => dir( File::HomeDir->my_home, ".backimap" )->stringify(),
         init    => 0,
     );
 
@@ -67,6 +66,9 @@ sub new {
         'init',
     )
         or __PACKAGE__->usage();
+
+    # make sure that dir is a Path::Class
+    $opt{'dir'} = dir( $opt{'dir'} );
 
     $opt{'args'} = \@argv;
 
@@ -98,7 +100,7 @@ sub setup {
     );
 
     my $dir = $self->{'dir'};
-    my $filename = catfile( $dir, "backimap.json" );
+    my $filename = $dir->file("backimap.json");
 
     $self->storage(
         App::backimap::Storage->new(
@@ -111,7 +113,7 @@ sub setup {
     $self->save()
         if $self->{'init'};
 
-    my $status = App::backimap::Status->load($filename);
+    my $status = App::backimap::Status->load("$filename");
 
     die "imap details do not match with previous status\n"
         if $status->user ne $self->status->user ||
@@ -135,7 +137,7 @@ sub save {
     croak "must define status first"
         unless defined $self->status;
 
-    $self->status->store( catfile( $self->{'dir'}, "backimap.json" ) );
+    $self->status->store( $self->{'dir'}->file("backimap.json")->stringify() );
     $self->storage->put("save status");
 }
 
@@ -184,11 +186,11 @@ sub backup {
 
         $imap->examine($folder);
         for my $msg ( $imap->messages ) {
-            my $file = catfile( $folder, $msg );
-            next if $self->storage->get($file);
+            my $file = file( $folder, $msg );
+            next if $self->storage->get("$file");
 
             my $fetch = $imap->fetch( $msg, 'RFC822' );
-            $self->storage->put( "save message $file", $file => $fetch->[2] );
+            $self->storage->put( "save message $file", "$file" => $fetch->[2] );
         }
 
         print STDERR "\n"
