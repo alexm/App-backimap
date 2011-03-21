@@ -1,3 +1,8 @@
+0.00_06    2011-03-21
+
+ - Refactor imap to a Moose attribute.
+ - Refactor git repository into generic storage.
+
 0.00_05    2011-03-15
 
  - Refactor status to a Moose attribute with serialization.
