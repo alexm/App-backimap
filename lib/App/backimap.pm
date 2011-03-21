@@ -15,6 +15,7 @@ use Moose;
 use App::backimap::Status;
 use App::backimap::Status::Folder;
 use App::backimap::IMAP;
+use App::backimap::Storage;
 
 has status => (
     is => 'rw',
@@ -24,6 +25,11 @@ has status => (
 has imap => (
     is => 'rw',
     isa => 'App::backimap::IMAP',
+);
+
+has storage => (
+    is => 'rw',
+    isa => 'App::backimap::Storage',
 );
 
 use Getopt::Long         qw( GetOptionsFromArray );
@@ -93,19 +99,17 @@ sub setup {
 
     my $dir = $self->{'dir'};
     my $filename = catfile( $dir, "backimap.json" );
-    my $git = Git::Wrapper->new($dir);
-    $self->{'git'} = $git;
 
-    if ( $self->{'init'} ) {
-        die "directory $dir already initialized\n"
-            if -f $filename || -d catfile( $dir, ".git" );
+    $self->storage(
+        App::backimap::Storage->new(
+            dir => $dir,
+            init => $self->{'init'},
+        ),
+    );
 
-        mkpath($dir);
-        $git->init();
-
-        # save initial status in the Git repository
-        $self->save();
-    }
+    # save initial status
+    $self->save()
+        if $self->{'init'};
 
     my $status = App::backimap::Status->load($filename);
 
@@ -127,19 +131,12 @@ sub save {
     my ($self) = @_;
 
     my $git = $self->{'git'};
-    croak "must setup git repo first"
-        unless defined $git && $git->isa('Git::Wrapper');
 
     croak "must define status first"
         unless defined $self->status;
 
-    my $dir = $self->{'dir'};
-    my $filename = catfile( $dir, "backimap.json" );
-
-    $self->status->store($filename);
-
-    $git->add($filename);
-    $git->commit( { message => "save status" }, $filename );
+    $self->status->store( catfile( $self->{'dir'}, "backimap.json" ) );
+    $self->storage->put("save status");
 }
 
 =method backup
@@ -150,10 +147,6 @@ Perform IMAP folder backup recursively into Git repository.
 
 sub backup {
     my ($self) = @_;
-
-    my $git = $self->{'git'};
-    croak "must init git repo first"
-        unless defined $git && $git->isa('Git::Wrapper');
 
     my $imap = $self->imap->client;
 
@@ -189,26 +182,14 @@ sub backup {
         print STDERR " * $folder ($unseen/$count)"
             if $self->{'verbose'};
 
-        my $local_folder = catfile( $self->{'dir'}, $folder );
-        mkpath( $local_folder );
-        chdir $local_folder;
-
         $imap->examine($folder);
         for my $msg ( $imap->messages ) {
-            next if -f $msg;
+            my $file = catfile( $folder, $msg );
+            next if $self->storage->get($file);
 
             my $fetch = $imap->fetch( $msg, 'RFC822' );
-
-            open my $file, ">", $msg
-                or die "message $msg: $!";
-
-            print $file $fetch->[2];
-            close $file;
-
-            $git->add( catfile( $local_folder, $msg ) );
+            $self->storage->put( "save message $file", $file => $fetch->[2] );
         }
-
-        eval { $git->commit({ all => 1, message => "save messages from $folder" }) };
 
         print STDERR "\n"
             if $self->{'verbose'};
