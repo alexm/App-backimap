@@ -114,7 +114,7 @@ sub setup {
 
     my $status = App::backimap::Status->load("$filename");
 
-    die "imap details do not match with previous status\n"
+    die "IMAP credentials do not match saved status\n"
         if $status->user ne $self->status->user ||
             $status->server ne $self->status->server;
 
@@ -131,7 +131,7 @@ Save current status into Git repository.
 sub save {
     my ($self) = @_;
 
-    croak "must define status first"
+    confess "must setup status before saving it"
         unless defined $self->status;
 
     $self->status->store( $self->{'dir'}->file("backimap.json")->stringify() );
