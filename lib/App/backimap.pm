@@ -36,7 +36,6 @@ use Getopt::Long         qw( GetOptionsFromArray );
 use Pod::Usage;
 use URI;
 use Path::Class qw( dir file );
-use Git::Wrapper;
 use File::HomeDir;
 use Carp;
 
@@ -131,8 +130,6 @@ Save current status into Git repository.
 
 sub save {
     my ($self) = @_;
-
-    my $git = $self->{'git'};
 
     croak "must define status first"
         unless defined $self->status;
