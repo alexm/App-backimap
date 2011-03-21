@@ -4,7 +4,6 @@ package App::backimap::Storage;
 use Moose;
 use Moose::Util::TypeConstraints;
 use MooseX::Types::Path::Class;
-use File::chdir;
 
 =attr dir
 
@@ -73,7 +72,6 @@ sub put {
     my ( $change, %files ) = @_;
 
     my $dir = $self->dir;
-    local $CWD = "$dir";
 
     for my $filename ( keys %files ) {
         my $filepath = $dir->file($filename);
