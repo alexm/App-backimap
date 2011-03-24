@@ -53,9 +53,7 @@ has storage => (
 use Getopt::Long         qw( GetOptionsFromArray );
 use Pod::Usage;
 use URI;
-use Path::Class qw( dir file );
-use File::HomeDir;
-use Carp;
+use Path::Class qw( file );
 
 =method new
 
@@ -69,7 +67,7 @@ sub new {
     my %opt = (
         help    => 0,
         verbose => 0,
-        dir     => dir( File::HomeDir->my_home, ".backimap" )->stringify(),
+        dir     => undef,
         init    => 0,
     );
 
@@ -84,9 +82,6 @@ sub new {
     )
         or __PACKAGE__->usage();
 
-    # make sure that dir is a Path::Class
-    $opt{'dir'} = dir( $opt{'dir'} );
-
     $opt{'args'} = \@argv;
 
     return bless \%opt, $class;
@@ -94,67 +89,29 @@ sub new {
 
 =method setup
 
-Setups configuration and prompts for password if needed.
-Then opens Git repository (initialize if asked) and
-load previous status.
+Setups storage, IMAP connection and backimap status.
 
 =cut
 
 sub setup {
     my ( $self, $str ) = @_;
 
-    my $uri = URI->new($str);
-
-    $self->imap(
-        App::backimap::IMAP->new( uri => $uri )
+    my $storage = App::backimap::Storage->new(
+        dir  => $self->{'dir'},
+        init => $self->{'init'},
     );
+    $self->storage($storage);
 
-    $self->status(
-        App::backimap::Status->new(
-            server    => $self->imap->host,
-            user      => $self->imap->user,
-        )
+    my $uri  = URI->new($str);
+    my $imap = App::backimap::IMAP->new( uri => $uri );
+    $self->imap($imap);
+
+    my $status = App::backimap::Status->new(
+        storage => $storage,
+        server  => $imap->host,
+        user    => $imap->user,
     );
-
-    my $dir = $self->{'dir'};
-    my $filename = $dir->file("backimap.json");
-
-    $self->storage(
-        App::backimap::Storage->new(
-            dir => $dir,
-            init => $self->{'init'},
-        ),
-    );
-
-    # save initial status
-    $self->save()
-        if $self->{'init'};
-
-    my $status = App::backimap::Status->load("$filename");
-
-    die "IMAP credentials do not match saved status\n"
-        if $status->user ne $self->status->user ||
-            $status->server ne $self->status->server;
-
-    $self->status->folder( $status->folder )
-        if $status->folder;
-}
-
-=method save
-
-Save current status into storage backend.
-Status must be setup before saving is possible.
-
-=cut
-
-sub save {
-    my ($self) = @_;
-
-    confess "must setup status before saving it"
-        unless defined $self->status;
-
-    $self->status->store( $self->{'dir'}->file("backimap.json")->stringify() );
-    $self->storage->put("save status");
+    $self->status($status);
 }
 
 =method backup
@@ -187,14 +144,12 @@ sub backup {
             $self->status->folder->{$folder}->unseen($unseen);
         }
         else {
-            my %status = (
-                $folder => App::backimap::Status::Folder->new(
-                    count => $count,
-                    unseen => $unseen,
-                ),
+            my $status = App::backimap::Status::Folder->new(
+                count => $count,
+                unseen => $unseen,
             );
 
-            $self->status->folder(\%status);
+            $self->status->folder({ $folder => $status });
         }
 
         print STDERR " * $folder ($unseen/$count)"
@@ -203,7 +158,7 @@ sub backup {
         $imap->examine($folder);
         for my $msg ( $imap->messages ) {
             my $file = file( $folder, $msg );
-            next if $self->storage->get("$file");
+            next if $self->storage->find($file);
 
             my $fetch = $imap->fetch( $msg, 'RFC822' );
             $self->storage->put( "save message $file", "$file" => $fetch->[2] );
@@ -228,7 +183,7 @@ sub run {
 
     $self->setup(@args);
     $self->backup();
-    $self->save();
+    $self->status->save();
 
     my $spent = ( time - $^T ) / 60;
     printf STDERR "Backup took %.2f minutes.\n", $spent

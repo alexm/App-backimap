@@ -3,7 +3,7 @@ package App::backimap::Status;
 
 use Moose;
 use MooseX::Storage;
-with Storage( 'format' => 'JSON', 'io' => 'File' );
+with Storage( 'format' => 'JSON' );
 
 use English qw( -no_match_vars );
 
@@ -54,5 +54,60 @@ has folder => (
     is => 'rw',
     isa => 'HashRef[App::backimap::Status::Folder]',
 );
+
+=attr storage
+
+Object to use as the storage backend for status.
+
+=cut
+
+has storage => (
+    is => 'ro',
+    isa => 'App::backimap::Storage',
+);
+
+my $FILENAME = 'backimap.json';
+
+=for Pod::Coverage BUILD
+
+Extra status initialization is not documented.
+
+=cut
+
+sub BUILD {
+    my $self = shift;
+
+    return unless $self->storage;
+
+    if ( $self->storage->init ) {
+        $self->save();
+    }
+    else {
+        my $json = $self->storage->get($FILENAME);
+        my $status = App::backimap::Status->thaw($json);
+
+        die "IMAP credentials do not match saved status\n"
+            if $status->user ne $self->user ||
+                $status->server ne $self->server;
+
+        $self->folder( $status->folder )
+            if $status->folder;
+    }
+}
+
+=method save
+
+Save status to storage backend.
+
+=cut
+
+sub save {
+    my $self = shift;
+
+    return unless $self->storage;
+
+    my $json = $self->freeze();
+    $self->storage->put( "save status", $FILENAME => $json );
+}
 
 1;

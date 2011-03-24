@@ -4,10 +4,12 @@ package App::backimap::Storage;
 use Moose;
 use Moose::Util::TypeConstraints;
 use MooseX::Types::Path::Class;
+use File::HomeDir;
+use Git::Wrapper;
 
 =attr dir
 
-Sets pathname to the storage.
+Sets pathname to the storage (defaults to ~/.backimap).
 
 =cut
 
@@ -16,6 +18,7 @@ has dir => (
     isa => 'Path::Class::Dir',
     required => 1,
     coerce => 1,
+    default => sub { File::HomeDir->my_home . ".backimap" },
 );
 
 =attr init
@@ -54,6 +57,19 @@ has _git => (
     },
 );
 
+=method find
+
+Returns a list of files that are found in storage.
+
+=cut
+
+sub find {
+    my $self = shift;
+
+    my @found = grep { -f $self->dir->file($_) } @_;
+    return @found;
+}
+
 =method get( $file )
 
 Retrieves file from storage.
@@ -64,7 +80,7 @@ sub get {
     my $self = shift;
     my ($file) = @_;
 
-    return -f $self->dir->file($file);
+    return $self->dir->file($file)->slurp();
 }
 
 =method put( $change, $file => $content, ... )
@@ -101,5 +117,15 @@ sub put {
         $self->_git->commit( { message => $change, all => 1 } );
     }
 }
+
+=for Pod::Coverage pack unpack
+
+Required methods in status for MooseX::Storage that don't perform any action
+since the storage backend does not support serialization.
+
+=cut
+
+sub pack   { }
+sub unpack { }
 
 1;
