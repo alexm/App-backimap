@@ -70,6 +70,23 @@ sub find {
     return @found;
 }
 
+=method list
+
+Returns a list of files in a directory from storage.
+
+=cut
+
+sub list {
+    my $self = shift;
+    my ($dir) = @_;
+
+    $dir = $self->dir->subdir($dir);
+    my @list = grep !( $_->is_dir() ), $dir->children();
+
+    @list = map { $_->relative($dir) } @list;
+    return @list;
+}
+
 =method get( $file )
 
 Retrieves file from storage.
@@ -116,6 +133,22 @@ sub put {
         $self->_git->add("$dir");
         $self->_git->commit( { message => $change, all => 1 } );
     }
+}
+
+=method delete( $change, $file, ... )
+
+Removes files from storage.
+
+=cut
+
+sub delete {
+    my $self = shift;
+    my $change = shift;
+
+    my @files = map { $self->dir->file($_)->stringify() } @_;
+
+    $self->_git->rm(@files) if @files;
+    $self->_git->commit( { message => $change, all => !@files }, @files );
 }
 
 =for Pod::Coverage pack unpack

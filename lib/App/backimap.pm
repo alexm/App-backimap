@@ -153,13 +153,27 @@ sub backup {
         print STDERR " * $folder ($unseen/$count)"
             if $self->{'verbose'};
 
+        # list of potential files to purge
+        my %purge = map { $_ => 1 } $self->storage->list($folder);
+
         $imap->examine($folder);
         for my $msg ( $imap->messages ) {
+            # do not purge if still present in server
+            delete $purge{$msg};
+
             my $file = file( $folder, $msg );
             next if $self->storage->find($file);
 
             my $fetch = $imap->fetch( $msg, 'RFC822' );
             $self->storage->put( "save message $file", "$file" => $fetch->[2] );
+        }
+
+        my @purge = map { file( $folder, $_ ) } keys %purge;
+        if (@purge) {
+            print STDERR " (@purge)"
+                if $self->{'verbose'};
+
+            $self->storage->delete( "purge deleted messages in $folder", @purge );
         }
 
         print STDERR "\n"
