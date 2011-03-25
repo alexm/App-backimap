@@ -124,11 +124,9 @@ sub backup {
     my ($self) = @_;
 
     my $imap = $self->imap->client;
-
-    my $path = $self->imap->path;
-    $path =~ s#^/+##;
-
-    my @folder_list = $path ne '' ? $path : $imap->folders;
+    my @folder_list = $self->imap->path ne ''
+                    ? $self->imap->path
+                    : $imap->folders;
 
     print STDERR "Examining folders...\n"
         if $self->{'verbose'};

@@ -123,7 +123,14 @@ has path => (
     is => 'ro',
     isa => 'Str',
     lazy => 1,
-    default => sub { shift->uri->path },
+    default => sub {
+        my $self = shift;
+
+        my $path = $self->uri->path;
+        $path =~ s#^/+##;
+
+        return $path;
+    },
 );
 
 =attr client
