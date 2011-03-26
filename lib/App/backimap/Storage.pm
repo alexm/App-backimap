@@ -85,7 +85,7 @@ has _git => (
     },
 );
 
-=method find
+=method find( $file, ... )
 
 Returns a list of files that are found in storage.
 
@@ -98,7 +98,7 @@ sub find {
     return @found;
 }
 
-=method list
+=method list( $dir )
 
 Returns a list of files in a directory from storage.
 
@@ -162,7 +162,7 @@ sub put {
     }
 }
 
-=method delete( $change, $file, ... )
+=method delete( $file, ... )
 
 Removes files from storage.
 
@@ -170,7 +170,6 @@ Removes files from storage.
 
 sub delete {
     my $self = shift;
-    my $change = shift;
 
     my @files = map { $self->dir->file($_)->stringify() } @_;
 
