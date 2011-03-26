@@ -77,7 +77,7 @@ sub new {
         \%opt,
 
         'help|h',
-        'verbose|v',
+        'verbose|v+',
         'dir=s',
         'init!',
         'clean!',
