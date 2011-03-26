@@ -81,6 +81,8 @@ sub list {
     my ($dir) = @_;
 
     $dir = $self->dir->subdir($dir);
+    return unless -d $dir;
+
     my @list = grep !( $_->is_dir() ), $dir->children();
 
     @list = map { $_->relative($dir) } @list;
@@ -147,8 +149,13 @@ sub delete {
 
     my @files = map { $self->dir->file($_)->stringify() } @_;
 
-    $self->_git->rm(@files) if @files;
-    $self->_git->commit( { message => $change, all => !@files }, @files );
+    if (@files) {
+        $self->_git->rm(@files);
+        $self->_git->commit( { message => $change }, @files );
+    }
+    else {
+        $self->_git->commit( { message => $change, all => 1 } );
+    }
 }
 
 =for Pod::Coverage pack unpack
