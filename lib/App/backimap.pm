@@ -137,7 +137,7 @@ sub backup {
 
         my $unseen = $imap->unseen_count($folder);
 
-        if ( $self->status->folder ) {
+        if ( $self->status->folder && exists $self->status->folder->{$folder} ) {
             $self->status->folder->{$folder}->count($count);
             $self->status->folder->{$folder}->unseen($unseen);
         }
