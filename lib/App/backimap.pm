@@ -69,6 +69,7 @@ sub new {
         verbose => 0,
         dir     => undef,
         init    => 0,
+        clean   => 0,
     );
 
     GetOptionsFromArray(
@@ -78,7 +79,8 @@ sub new {
         'help|h',
         'verbose|v',
         'dir=s',
-        'init',
+        'init!',
+        'clean!',
     )
         or __PACKAGE__->usage();
 
@@ -97,8 +99,9 @@ sub setup {
     my ( $self, $str ) = @_;
 
     my $storage = App::backimap::Storage->new(
-        dir  => $self->{'dir'},
-        init => $self->{'init'},
+        dir   => $self->{'dir'},
+        init  => $self->{'init'},
+        clean => $self->{'clean'},
     );
     $self->storage($storage);
 
@@ -165,7 +168,7 @@ sub backup {
             next if $self->storage->find($file);
 
             my $fetch = $imap->fetch( $msg, 'RFC822' );
-            $self->storage->put( "save message $file", "$file" => $fetch->[2] );
+            $self->storage->put( "$file" => $fetch->[2] );
         }
 
         my @purge = map { file( $folder, $_ ) } keys %purge;
@@ -173,7 +176,7 @@ sub backup {
             print STDERR " (@purge)"
                 if $self->{'verbose'};
 
-            $self->storage->delete( "purge deleted messages in $folder", @purge );
+            $self->storage->delete(@purge);
         }
 
         print STDERR "\n"
@@ -194,11 +197,16 @@ sub run {
     $self->usage unless @args == 1;
 
     $self->setup(@args);
-    $self->backup();
-    $self->status->save();
 
-    my $spent = ( time - $^T ) / 60;
-    printf STDERR "Backup took %.2f minutes.\n", $spent
+    my $start = time();
+    $self->backup();
+    my $spent = ( time() - $start ) / 60;
+    my $message = sprintf "backup took %.2f minutes", $spent;
+
+    $self->status->save();
+    $self->storage->commit($message);
+
+    printf STDERR "$message\n"
         if $self->{'verbose'};
 }
 

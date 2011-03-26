@@ -33,6 +33,22 @@ has init => (
     default => 0,
 );
 
+=attr clean
+
+Tells that storage must be cleaned if dirty.
+
+=cut
+
+has clean => (
+    is => 'ro',
+    isa => 'Bool',
+    default => 0,
+);
+
+sub _git_reset {
+    shift->reset( { hard => 1 } );
+}
+
 subtype 'Git::Wrapper' => as 'Object' => where { $_->isa('Git::Wrapper') };
 
 has _git => (
@@ -51,6 +67,18 @@ has _git => (
 
             $dir->mkpath();
             $git->init();
+        }
+
+        if ( $git->status->is_dirty ) {
+            die "directory $dir is dirty, consider --clean option\n"
+                unless $self->clean;
+
+            _git_reset($git);
+
+            if ( $git->status->is_dirty ) {
+                my @unknown = map { $_->from } $git->status->get("unknown");
+                die "directory $dir still has unknown files: @unknown\n";
+            }
         }
 
         return $git;
@@ -102,7 +130,7 @@ sub get {
     return $self->dir->file($file)->slurp();
 }
 
-=method put( $change, $file => $content, ... )
+=method put( $file => $content, ... )
 
 Adds files to storage with a text describing the change.
 
@@ -110,7 +138,12 @@ Adds files to storage with a text describing the change.
 
 sub put {
     my $self = shift;
-    my ( $change, %files ) = @_;
+    my %files = @_;
+
+    # This makes sure that git repo is properly initialized
+    # before any new file is added. Otherwise it would fail
+    # because repo would be dirty.
+    my $git = $self->_git;
 
     my $dir = $self->dir;
 
@@ -125,15 +158,7 @@ sub put {
         $file->print( $files{$filename} );
         $file->close();
 
-        $self->_git->add($filename);
-    }
-
-    if ( keys %files ) {
-        $self->_git->commit( { message => $change }, keys %files );
-    }
-    else {
-        $self->_git->add("$dir");
-        $self->_git->commit( { message => $change, all => 1 } );
+        $git->add($filename);
     }
 }
 
@@ -149,13 +174,39 @@ sub delete {
 
     my @files = map { $self->dir->file($_)->stringify() } @_;
 
-    if (@files) {
-        $self->_git->rm(@files);
-        $self->_git->commit( { message => $change }, @files );
+    $self->_git->rm(@files)
+        if @files;
+}
+
+=method commit($change, [$file] ...)
+
+Commits pending storage actions with a description of change.
+If a list of files is provided, only those will be committed.
+Otherwise all pending actions will be performed.
+
+=cut
+
+sub commit {
+    my $self = shift;
+    my $change = shift;
+
+    if (@_) {
+        $self->_git->commit( { message => $change }, @_ );
     }
     else {
         $self->_git->commit( { message => $change, all => 1 } );
     }
+}
+
+=method reset
+
+Rolls back any storage actions that were performed but not committed.
+Returns storage back to last committed status.
+
+=cut
+
+sub reset {
+    _git_reset( shift->_git );
 }
 
 =for Pod::Coverage pack unpack

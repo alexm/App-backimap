@@ -107,7 +107,7 @@ sub save {
     return unless $self->storage;
 
     my $json = $self->freeze();
-    $self->storage->put( "save status", $FILENAME => $json );
+    $self->storage->put( $FILENAME => $json );
 }
 
 1;
