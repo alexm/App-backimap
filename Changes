@@ -1,3 +1,10 @@
+0.00_07    2011-03-27
+
+ - Improve status and storage coupling.
+ - Add message purging on local storage.
+ - Make only 1 storage commit per session.
+ - Add option for cleaning dirty storage.
+
 0.00_06    2011-03-21
 
  - Refactor imap to a Moose attribute.
