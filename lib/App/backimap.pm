@@ -16,6 +16,7 @@ use App::backimap::Status;
 use App::backimap::Status::Folder;
 use App::backimap::IMAP;
 use App::backimap::Storage;
+use Try::Tiny;
 
 =attr status
 
@@ -134,53 +135,60 @@ sub backup {
     print STDERR "Examining folders...\n"
         if $self->{'verbose'};
 
-    for my $folder (@folder_list) {
-        my $count  = $imap->message_count($folder);
-        next unless defined $count;
-
-        my $unseen = $imap->unseen_count($folder);
-
-        if ( $self->status->folder && exists $self->status->folder->{$folder} ) {
-            $self->status->folder->{$folder}->count($count);
-            $self->status->folder->{$folder}->unseen($unseen);
-        }
-        else {
-            my $status = App::backimap::Status::Folder->new(
-                count => $count,
-                unseen => $unseen,
-            );
-
-            $self->status->folder({ $folder => $status });
-        }
-
-        print STDERR " * $folder ($unseen/$count)"
-            if $self->{'verbose'};
-
-        # list of potential files to purge
-        my %purge = map { $_ => 1 } $self->storage->list($folder);
-
-        $imap->examine($folder);
-        for my $msg ( $imap->messages ) {
-            # do not purge if still present in server
-            delete $purge{$msg};
-
-            my $file = file( $folder, $msg );
-            next if $self->storage->find($file);
-
-            my $fetch = $imap->fetch( $msg, 'RFC822' );
-            $self->storage->put( "$file" => $fetch->[2] );
-        }
-
-        my @purge = map { file( $folder, $_ ) } keys %purge;
-        if (@purge) {
-            print STDERR " (@purge)"
+    try {
+        for my $folder (@folder_list) {
+            my $count  = $imap->message_count($folder);
+            next unless defined $count;
+    
+            my $unseen = $imap->unseen_count($folder);
+    
+            if ( $self->status->folder && exists $self->status->folder->{$folder} ) {
+                $self->status->folder->{$folder}->count($count);
+                $self->status->folder->{$folder}->unseen($unseen);
+            }
+            else {
+                my $status = App::backimap::Status::Folder->new(
+                    count => $count,
+                    unseen => $unseen,
+                );
+    
+                $self->status->folder({ $folder => $status });
+            }
+    
+            print STDERR " * $folder ($unseen/$count)"
                 if $self->{'verbose'};
-
-            $self->storage->delete(@purge);
+    
+            # list of potential files to purge
+            my %purge = map { $_ => 1 } $self->storage->list($folder);
+    
+            $imap->examine($folder);
+            for my $msg ( $imap->messages ) {
+                # do not purge if still present in server
+                delete $purge{$msg};
+    
+                my $file = file( $folder, $msg );
+                next if $self->storage->find($file);
+    
+                my $fetch = $imap->fetch( $msg, 'RFC822' );
+                $self->storage->put( "$file" => $fetch->[2] );
+            }
+    
+            my @purge = map { file( $folder, $_ ) } keys %purge;
+            if (@purge) {
+                print STDERR " (@purge)"
+                    if $self->{'verbose'};
+    
+                $self->storage->delete(@purge);
+            }
+    
+            print STDERR "\n"
+                if $self->{'verbose'};
         }
-
-        print STDERR "\n"
-            if $self->{'verbose'};
+    }
+    catch {
+        die "oops! error in IMAP transaction...\n\n" .
+            $imap->Results .
+            sprintf( "\ntime=%.2f\n", ( $^T - time ) / 60 );
     }
 }
 
