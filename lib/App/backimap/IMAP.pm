@@ -5,6 +5,8 @@ use Moose;
 use Moose::Util::TypeConstraints;
 use IO::Prompt();
 use Mail::IMAPClient();
+use Encode::IMAPUTF7();
+use Encode();
 
 =attr uri
 
@@ -124,7 +126,7 @@ has path => (
     default => sub {
         my $self = shift;
 
-        my $path = $self->uri->path;
+        my $path = Encode::encode( 'imap-utf-7', $self->uri->path );
         $path =~ s#^/+##;
 
         return $path;

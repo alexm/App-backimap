@@ -17,6 +17,8 @@ use App::backimap::Status::Folder;
 use App::backimap::IMAP;
 use App::backimap::Storage;
 use Try::Tiny;
+use Encode::IMAPUTF7();
+use Encode();
 
 =attr status
 
@@ -140,14 +142,15 @@ sub backup {
 
     try {
         for my $folder (@folder_list) {
+            my $folder_name = Encode::decode( 'imap-utf-7', $folder );
             my $count  = $imap->message_count($folder);
             next unless defined $count;
     
             my $unseen = $imap->unseen_count($folder);
     
-            if ( $status_of && exists $status_of->{$folder} ) {
-                $status_of->{$folder}->count($count);
-                $status_of->{$folder}->unseen($unseen);
+            if ( $status_of && exists $status_of->{$folder_name} ) {
+                $status_of->{$folder_name}->count($count);
+                $status_of->{$folder_name}->unseen($unseen);
             }
             else {
                 my $new_status = App::backimap::Status::Folder->new(
@@ -155,32 +158,33 @@ sub backup {
                     unseen => $unseen,
                 );
     
-                $self->status->folder({ $folder => $new_status });
+                $self->status->folder({ $folder_name => $new_status });
             }
     
-            print STDERR " * $folder ($unseen/$count)"
+            print STDERR " * $folder_name ($unseen/$count)"
                 if $self->{'verbose'};
     
             # list of potential files to purge
-            my %purge = map { $_ => 1 } $storage->list($folder);
+            my %purge = map { $_ => 1 } $storage->list($folder_name);
     
             $imap->examine($folder);
             for my $msg ( $imap->messages ) {
                 # do not purge if still present in server
                 delete $purge{$msg};
     
-                my $file = file( $folder, $msg );
+                my $file = file( $folder_name, $msg );
                 next if $storage->find($file);
     
                 my $fetch = $imap->fetch( $msg, 'RFC822' );
                 $storage->put( "$file" => $fetch->[2] );
             }
     
-            my @purge = map { file( $folder, $_ ) } keys %purge;
-            if (@purge) {
-                print STDERR " (@purge)"
+            if (%purge) {
+                local $, = q{ };
+                print STDERR " (", keys %purge, ")"
                     if $self->{'verbose'};
-    
+
+                my @purge = map { file( $folder_name, $_ ) } keys %purge;
                 $storage->delete(@purge);
             }
     
