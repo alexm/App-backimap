@@ -7,6 +7,7 @@ use IO::Prompt();
 use Mail::IMAPClient();
 use Encode::IMAPUTF7();
 use Encode();
+use URI::Escape();
 
 =attr uri
 
@@ -123,16 +124,19 @@ has path => (
     is => 'ro',
     isa => 'Str',
     lazy => 1,
-    default => sub {
-        my $self = shift;
-
-        my $utf8_path = Encode::decode( 'utf-8', $self->uri->path );
-        my $imap_path = Encode::encode( 'imap-utf-7', $utf8_path );
-        $imap_path =~ s#^/+##;
-
-        return $imap_path;
-    },
+    builder => '_build_path',
 );
+
+sub _build_path {
+    my $self = shift;
+
+    my $uri_path = URI::Escape::uri_unescape( $self->uri->path );
+    my $utf8_path = Encode::decode( 'utf-8', $uri_path );
+    my $imap_path = Encode::encode( 'imap-utf-7', $utf8_path );
+    $imap_path =~ s#^/+##;
+
+    return $imap_path;
+}
 
 =attr client
 

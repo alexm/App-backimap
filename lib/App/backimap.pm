@@ -142,7 +142,7 @@ sub backup {
 
     try {
         for my $folder (@folder_list) {
-            my $folder_name = Encode::decode( 'imap-utf-7', $folder );
+            my $folder_name = Encode::encode( 'utf-8', Encode::decode( 'imap-utf-7', $folder ) );
             my $count  = $imap->message_count($folder);
             next unless defined $count;
     
