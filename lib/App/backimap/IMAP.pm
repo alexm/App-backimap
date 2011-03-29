@@ -126,10 +126,11 @@ has path => (
     default => sub {
         my $self = shift;
 
-        my $path = Encode::encode( 'imap-utf-7', $self->uri->path );
-        $path =~ s#^/+##;
+        my $utf8_path = Encode::decode( 'utf-8', $self->uri->path );
+        my $imap_path = Encode::encode( 'imap-utf-7', $utf8_path );
+        $imap_path =~ s#^/+##;
 
-        return $path;
+        return $imap_path;
     },
 );
 
