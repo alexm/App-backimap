@@ -127,6 +127,9 @@ Perform IMAP folder backup recursively.
 sub backup {
     my ($self) = @_;
 
+    my $storage = $self->storage;
+    my $status_of = $self->status->folder;
+
     my $imap = $self->imap->client;
     my @folder_list = $self->imap->path ne ''
                     ? $self->imap->path
@@ -142,24 +145,24 @@ sub backup {
     
             my $unseen = $imap->unseen_count($folder);
     
-            if ( $self->status->folder && exists $self->status->folder->{$folder} ) {
-                $self->status->folder->{$folder}->count($count);
-                $self->status->folder->{$folder}->unseen($unseen);
+            if ( $status_of && exists $status_of->{$folder} ) {
+                $status_of->{$folder}->count($count);
+                $status_of->{$folder}->unseen($unseen);
             }
             else {
-                my $status = App::backimap::Status::Folder->new(
+                my $new_status = App::backimap::Status::Folder->new(
                     count => $count,
                     unseen => $unseen,
                 );
     
-                $self->status->folder({ $folder => $status });
+                $self->status->folder({ $folder => $new_status });
             }
     
             print STDERR " * $folder ($unseen/$count)"
                 if $self->{'verbose'};
     
             # list of potential files to purge
-            my %purge = map { $_ => 1 } $self->storage->list($folder);
+            my %purge = map { $_ => 1 } $storage->list($folder);
     
             $imap->examine($folder);
             for my $msg ( $imap->messages ) {
@@ -167,10 +170,10 @@ sub backup {
                 delete $purge{$msg};
     
                 my $file = file( $folder, $msg );
-                next if $self->storage->find($file);
+                next if $storage->find($file);
     
                 my $fetch = $imap->fetch( $msg, 'RFC822' );
-                $self->storage->put( "$file" => $fetch->[2] );
+                $storage->put( "$file" => $fetch->[2] );
             }
     
             my @purge = map { file( $folder, $_ ) } keys %purge;
@@ -178,7 +181,7 @@ sub backup {
                 print STDERR " (@purge)"
                     if $self->{'verbose'};
     
-                $self->storage->delete(@purge);
+                $storage->delete(@purge);
             }
     
             print STDERR "\n"
