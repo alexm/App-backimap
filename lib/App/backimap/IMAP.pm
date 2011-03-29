@@ -6,8 +6,6 @@ use Moose::Util::TypeConstraints;
 use IO::Prompt();
 use Mail::IMAPClient();
 
-use 5.010;
-
 =attr uri
 
 An L<URI::imap> or L<URI::imaps> object with the details
