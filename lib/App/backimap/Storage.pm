@@ -45,6 +45,35 @@ has clean => (
     default => 0,
 );
 
+=attr author
+
+Name of the committing author in local storage.
+
+The name is configured on the storage initialization.
+
+=cut
+
+has author => (
+    is => 'ro',
+    isa => 'Str',
+    default => 'backimap',
+);
+
+=attr email
+
+Author email address that will be used along with the author name
+as the committing author.
+
+The email is configured on the storage initialization.
+
+=cut
+
+has email => (
+    is => 'ro',
+    isa => 'Str',
+    default => 'backimap@example.org',
+);
+
 sub _git_reset {
     shift->reset( { hard => 1 } );
 }
@@ -55,35 +84,39 @@ has _git => (
     is => 'ro',
     isa => 'Git::Wrapper',
     lazy => 1,
-    default => sub {
-        my $self = shift;
+    builder => '_build_git',
+);
 
-        my $dir = $self->dir;
-        my $git = Git::Wrapper->new("$dir");
+sub _build_git {
+    my $self = shift;
 
-        if ( $self->init ) {
-            die "directory $dir already initialized\n"
-                if -d $dir->subdir(".git");
+    my $dir = $self->dir;
+    my $git = Git::Wrapper->new("$dir");
 
-            $dir->mkpath();
-            $git->init();
-        }
+    if ( $self->init ) {
+        die "directory $dir already initialized\n"
+            if -d $dir->subdir(".git");
+
+        $dir->mkpath();
+        $git->init();
+        $git->config( "user.name", $self->author );
+        $git->config( "user.email", $self->email );
+    }
+
+    if ( $git->status->is_dirty ) {
+        die "directory $dir is dirty, consider --clean option\n"
+            unless $self->clean;
+
+        _git_reset($git);
 
         if ( $git->status->is_dirty ) {
-            die "directory $dir is dirty, consider --clean option\n"
-                unless $self->clean;
-
-            _git_reset($git);
-
-            if ( $git->status->is_dirty ) {
-                my @unknown = map { $_->from } $git->status->get("unknown");
-                die "directory $dir still has unknown files: @unknown\n";
-            }
+            my @unknown = map { $_->from } $git->status->get("unknown");
+            die "directory $dir still has unknown files: @unknown\n";
         }
+    }
 
-        return $git;
-    },
-);
+    return $git;
+}
 
 =method find( $file, ... )
 
