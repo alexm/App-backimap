@@ -1,3 +1,9 @@
+0.00_08    2011-03-31
+
+ - Try to catch IMAP timeout error.
+ - Add support for IMAP-UTF-7 encoding.
+ - Add author and email attributes to storage.
+
 0.00_07    2011-03-27
 
  - Improve status and storage coupling.
