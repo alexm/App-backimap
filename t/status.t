@@ -10,7 +10,7 @@ my $class = 'App::backimap::Status';
 my @attributes = qw( timestamp server user folder storage );
 my @methods = qw( save );
 
-plan tests => 1 + @attributes + @methods;
+plan tests => 1 + @attributes + 1;
 
 use_ok($class);
 
