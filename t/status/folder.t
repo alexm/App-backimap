@@ -9,7 +9,7 @@ use Test::Moose;
 my $class = 'App::backimap::Status::Folder';
 my @attributes = qw( count unseen );
 
-plan tests => 1 + scalar(@attributes);
+plan tests => 1 + @attributes;
 
 use_ok($class);
 
