@@ -5,5 +5,9 @@ TODO
 * Deal with renaming of IMAP folders.
 * Show a progress bar and ETA.
 * Add an option to resume from a previous failed backup.
-* Update messages that have changed in IMAP server.
 * Check storage status before connecting to IMAP server.
+* Update messages that have changed in IMAP server.
+* Extract message MIME parts, headers and IMAP flags.
+* Export messages to standard format (e.g. mbox, Maildir)
+* Add support for pushing messages to an IMAP server.
+* Add an IMAP server interface.
