@@ -8,20 +8,5 @@ package backimap;
 require App::backimap;
 
 # ABSTRACT: backups imap mail
-my $app = App::backimap->new(@ARGV);
+my $app = App::backimap->new_with_options();
 $app->run();
-
-__END__
-
-=head1 SYNOPSIS
-
-    backimap imaps://user.name@gmail.com@imap.gmail.com/INBOX
-    
-    Options:
-        --init       Initialize Git repo and setup backimap status.
-        --clean      Clean up Git repo if dirty.
-        --dir PATH   Path to Git repo (default: $HOME/.backimap)
-        --verbose    Enable verbose messages.
-        --help|-h    This help message.
-
-=cut

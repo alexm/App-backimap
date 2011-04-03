@@ -4,7 +4,7 @@ package App::backimap;
 =head1 SYNOPSIS
 
     use App::backimap;
-    App::backimap->new(@ARGV)->run();
+    App::backimap->new_with_options()->run();
 
 =cut
 
@@ -12,6 +12,9 @@ use strict;
 use warnings;
 
 use Moose;
+with 'MooseX::Getopt';
+
+use MooseX::Types::Path::Class;
 use App::backimap::Status;
 use App::backimap::Status::Folder;
 use App::backimap::IMAP;
@@ -19,6 +22,65 @@ use App::backimap::Storage;
 use Try::Tiny;
 use Encode::IMAPUTF7();
 use Encode();
+use Path::Class qw( file );
+use URI();
+
+=head1 OPTIONS
+
+=over 4
+
+=item --uri STRING
+
+For instance: imaps://user@example.org@imap.example.org/folder
+
+=item --dir PATH
+
+Defaults to: ~/.backimap
+
+=item --init
+
+=item --clean
+
+=item --verbose
+
+=back
+
+=cut
+
+has uri => (
+    is => 'ro',
+    isa => 'Str',
+    documentation => 'URI for the remote IMAP folder.',
+    required => 1,
+);
+
+has dir => (
+    is => 'ro',
+    isa => 'Path::Class::Dir',
+    coerce => 1,
+    documentation => 'Path to storage (default: ~/.backimap)',
+);
+
+has init => (
+    is => 'ro',
+    isa => 'Bool',
+    default => 0,
+    documentation => 'Initialize storage and setup backimap status.',
+);
+
+has clean => (
+    is => 'ro',
+    isa => 'Bool',
+    default => 0,
+    documentation => 'Clean up storage if dirty.',
+);
+
+has verbose => (
+    is => 'ro',
+    isa => 'Bool',
+    default => 0,
+    documentation => 'Enable verbose messages.',
+);
 
 =attr status
 
@@ -26,7 +88,8 @@ Application persistent status.
 
 =cut
 
-has status => (
+has _status => (
+    accessor => 'status',
     is => 'rw',
     isa => 'App::backimap::Status',
 );
@@ -37,7 +100,8 @@ An object to encapsulate IMAP details.
 
 =cut
 
-has imap => (
+has _imap => (
+    accessor => 'imap',
     is => 'rw',
     isa => 'App::backimap::IMAP',
 );
@@ -48,49 +112,11 @@ Storage backend where files and messages are stored.
 
 =cut
 
-has storage => (
+has _storage => (
+    accessor => 'storage',
     is => 'rw',
     isa => 'App::backimap::Storage',
 );
-
-use Getopt::Long         qw( GetOptionsFromArray );
-use Pod::Usage;
-use URI;
-use Path::Class qw( file );
-
-=method new
-
-Creates a new program instance with command line arguments.
-
-=cut
-
-sub new {
-    my ( $class, @argv ) = @_;
-
-    my %opt = (
-        help    => 0,
-        verbose => 0,
-        dir     => undef,
-        init    => 0,
-        clean   => 0,
-    );
-
-    GetOptionsFromArray(
-        \@argv,
-        \%opt,
-
-        'help|h',
-        'verbose|v+',
-        'dir=s',
-        'init!',
-        'clean!',
-    )
-        or __PACKAGE__->usage();
-
-    $opt{'args'} = \@argv;
-
-    return bless \%opt, $class;
-}
 
 =method setup
 
@@ -99,16 +125,16 @@ Setups storage, IMAP connection and backimap status.
 =cut
 
 sub setup {
-    my ( $self, $str ) = @_;
+    my $self = shift;
 
     my $storage = App::backimap::Storage->new(
-        dir   => $self->{'dir'},
-        init  => $self->{'init'},
-        clean => $self->{'clean'},
+        dir   => $self->dir,
+        init  => $self->init,
+        clean => $self->clean,
     );
     $self->storage($storage);
 
-    my $uri  = URI->new($str);
+    my $uri  = URI->new( $self->uri );
     my $imap = App::backimap::IMAP->new( uri => $uri );
     $self->imap($imap);
 
@@ -138,7 +164,7 @@ sub backup {
                     : $imap->folders;
 
     print STDERR "Examining folders...\n"
-        if $self->{'verbose'};
+        if $self->verbose;
 
     try {
         for my $folder (@folder_list) {
@@ -162,7 +188,7 @@ sub backup {
             }
     
             print STDERR " * $folder_name ($unseen/$count)"
-                if $self->{'verbose'};
+                if $self->verbose;
     
             # list of potential files to purge
             my %purge = map { $_ => 1 } $storage->list($folder_name);
@@ -182,14 +208,14 @@ sub backup {
             if (%purge) {
                 local $, = q{ };
                 print STDERR " (", keys %purge, ")"
-                    if $self->{'verbose'};
+                    if $self->verbose;
 
                 my @purge = map { file( $folder_name, $_ ) } keys %purge;
                 $storage->delete(@purge);
             }
     
             print STDERR "\n"
-                if $self->{'verbose'};
+                if $self->verbose;
         }
     }
     catch {
@@ -206,12 +232,9 @@ Parses command line arguments and starts the program.
 =cut
 
 sub run {
-    my ($self) = @_;
+    my $self = shift;
 
-    my @args = @{ $self->{'args'} };
-    $self->usage unless @args == 1;
-
-    $self->setup(@args);
+    $self->setup();
 
     my $start = time();
     $self->backup();
@@ -222,19 +245,7 @@ sub run {
     $self->storage->commit($message);
 
     printf STDERR "$message\n"
-        if $self->{'verbose'};
-}
-
-=method usage
-
-Shows an usage summary.
-
-=cut
-
-sub usage {
-    my ($self) = @_;
-
-    pod2usage( verbose => 0, exitval => 1 );
+        if $self->verbose;
 }
 
 1;
