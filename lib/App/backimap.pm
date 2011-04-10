@@ -212,22 +212,30 @@ sub backup {
             next unless defined $count;
     
             my $unseen = $imap->unseen_count($folder);
+
+            my $folder_id = $imap->uidvalidity($folder);
     
             my $new_status = App::backimap::Status::Folder->new(
                 count => $count,
                 unseen => $unseen,
+                name => $folder_name,
             );
 
             if ( !$status_of ) {
-                $self->status->folder({ $folder_name => $new_status });
+                $self->status->folder({ $folder_id => $new_status });
                 $status_of = $self->status->folder;
             }
-            elsif ( !exists $status_of->{$folder_name} ) {
-                $status_of->{$folder_name} = $new_status;
+            elsif ( !exists $status_of->{$folder_id} ) {
+                $status_of->{$folder_id} = $new_status;
             }
             else {
-                $status_of->{$folder_name}->count($count);
-                $status_of->{$folder_name}->unseen($unseen);
+                $status_of->{$folder_id}->count($count);
+                $status_of->{$folder_id}->unseen($unseen);
+
+                if ( $folder_name ne $status_of->{$folder_id}->name ) {
+                    $storage->move( $status_of->{$folder_id}->name, $folder_name );
+                    $status_of->{$folder_id}->name($folder_name);
+                }
             }
     
             print STDERR " * $folder_name ($unseen/$count)"

@@ -210,6 +210,19 @@ sub delete {
         if @files;
 }
 
+=method move
+
+Renames or moves files and directories from one place to another in storage.
+
+=cut
+
+sub move {
+    my $self = shift;
+    my ( $from, $to ) = @_;
+
+    $self->_git->mv( $from, $to );
+}
+
 =method commit($change, [$file] ...)
 
 Commits pending storage actions with a description of change.

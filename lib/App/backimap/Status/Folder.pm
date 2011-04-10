@@ -29,4 +29,16 @@ has unseen => (
     required => 1,
 );
 
+=attr name
+
+Name of the folder.
+
+=cut
+
+has name => (
+    is => 'rw',
+    isa => 'Str',
+    required => 1,
+);
+
 1;

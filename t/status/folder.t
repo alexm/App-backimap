@@ -7,7 +7,7 @@ use Test::More;
 use Test::Moose;
 
 my $class = 'App::backimap::Status::Folder';
-my @attributes = qw( count unseen );
+my @attributes = qw( count unseen name );
 
 plan tests => 1 + @attributes;
 
