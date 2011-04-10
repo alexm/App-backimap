@@ -1,3 +1,14 @@
+0.00_09    2011-04-10
+
+ - Add tests for backimap moduless
+ - Enable kwalitee tests.
+ - Refactor backimap options with MooseX::Getopt.
+ - Improve error detection while performing backups.
+ - Add an option to exclude folders. (e.g. spam)
+ - Fix bug on saving folder status.
+ - Deal with renaming of IMAP folders.
+ - Show a progress bar and ETA.
+
 0.00_08    2011-03-31
 
  - Try to catch IMAP timeout error.
