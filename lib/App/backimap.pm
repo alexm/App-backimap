@@ -26,6 +26,7 @@ use Encode();
 use Path::Class qw( file );
 use URI();
 use Data::Dump();
+use Term::ProgressBar();
 
 =head1 OPTIONS
 
@@ -210,7 +211,7 @@ sub backup {
 
             my $count  = $imap->message_count($folder);
             next unless defined $count;
-    
+
             my $unseen = $imap->unseen_count($folder);
 
             my $folder_id = $imap->uidvalidity($folder);
@@ -237,15 +238,38 @@ sub backup {
                     $status_of->{$folder_id}->name($folder_name);
                 }
             }
-    
-            print STDERR " * $folder_name ($unseen/$count)"
-                if $self->verbose;
+
+            my $progress_update = 0;
+            my $progress;
+
+            if ( $self->verbose ) {
+                my $text = " * $folder_name ($unseen/$count)";
+
+                if ( $count > 0 ) {
+                    $progress = Term::ProgressBar->new({
+                        name => $text,
+                        count => $count,
+                        ETA => 'linear',
+                        fh => \*STDERR,
+                        remove => 0,
+                    });
+                }
+                else {
+                    print STDERR $text;
+                }
+            }
+
+            $progress->update($progress_update++)
+                if $self->verbose && $count > 0;
     
             # list of potential files to purge
             my %purge = map { $_ => 1 } $storage->list($folder_name);
     
             $imap->examine($folder);
             for my $msg ( $imap->messages ) {
+                $progress->update($progress_update++)
+                    if $self->verbose;
+
                 # do not purge if still present in server
                 delete $purge{$msg};
     
@@ -255,6 +279,9 @@ sub backup {
                 my $fetch = $imap->fetch( $msg, 'RFC822' );
                 $storage->put( "$file" => $fetch->[2] );
             }
+
+            $progress->update($count)
+                if $self->verbose && $count > 0;
     
             if (%purge) {
                 local $, = q{ };
