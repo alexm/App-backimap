@@ -14,6 +14,7 @@ use warnings;
 use Moose;
 with 'MooseX::Getopt';
 
+use Moose::Util::TypeConstraints;
 use MooseX::Types::Path::Class;
 use App::backimap::Status;
 use App::backimap::Status::Folder;
@@ -34,6 +35,10 @@ use Data::Dump();
 
 For instance: imaps://user@example.org@imap.example.org/folder
 
+=item --exclude STRING
+
+Folder name to exclude from backup (e.g. spam)
+
 =item --dir PATH
 
 Defaults to: ~/.backimap
@@ -53,6 +58,24 @@ has uri => (
     isa => 'Str',
     documentation => 'URI for the remote IMAP folder.',
     required => 1,
+);
+
+subtype 'ArrayOfUtf8'
+    => as 'ArrayRef';
+
+coerce 'ArrayOfUtf8'
+    => from 'ArrayRef'
+    => via { Encode::encode( 'utf-8', $_ ) };
+
+MooseX::Getopt::OptionTypeMap->add_option_type_to_map(
+    'ArrayOfUtf8' => '=s@'
+);
+
+has exclude => (
+    is => 'ro',
+    isa => 'ArrayOfUtf8',
+    documentation => 'Folder name to exclude from backup (e.g. spam).',
+    default => sub { [] },
 );
 
 has dir => (
@@ -119,6 +142,19 @@ has _storage => (
     isa => 'App::backimap::Storage',
 );
 
+=method is_excluded($folder)
+
+Returns boolean indicating that $folder is on the excluded list of folders.
+
+=cut
+
+sub is_excluded {
+    my $self = shift;
+    my ($folder) = @_;
+
+    return ! !grep $_ eq $folder, @{ $self->exclude };
+}
+
 =method setup
 
 Setups storage, IMAP connection and backimap status.
@@ -170,6 +206,8 @@ sub backup {
     try {
         for my $folder (@folder_list) {
             my $folder_name = Encode::encode( 'utf-8', Encode::decode( 'imap-utf-7', $folder ) );
+            next if $self->is_excluded($folder_name);
+
             my $count  = $imap->message_count($folder);
             next unless defined $count;
     
