@@ -219,9 +219,17 @@ sub backup {
         }
     }
     catch {
-        die "oops! error in IMAP transaction...\n\n" .
-            $imap->Results .
-            sprintf( "\ntime=%.2f\n", ( $^T - time ) / 60 );
+        if ( $imap->LastError ) {
+            print STDERR "OOPS! Error in IMAP transaction... ",
+                         $imap->LastError,
+                         "\n\n",
+                         dd( $imap->Results );
+        }
+        elsif ( $_ ne '' ) {
+            print STDERR "OOPS! $_";
+        }
+
+        die sprintf( "\ntime=%.2f\n", ( $^T - time ) / 60 );
     }
 }
 
