@@ -24,6 +24,7 @@ use Encode::IMAPUTF7();
 use Encode();
 use Path::Class qw( file );
 use URI();
+use Data::Dump();
 
 =head1 OPTIONS
 
@@ -223,7 +224,7 @@ sub backup {
             print STDERR "OOPS! Error in IMAP transaction... ",
                          $imap->LastError,
                          "\n\n",
-                         dd( $imap->Results );
+                         Data::Dump::pp( $imap->Results );
         }
         elsif ( $_ ne '' ) {
             print STDERR "OOPS! $_";
