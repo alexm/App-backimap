@@ -213,17 +213,21 @@ sub backup {
     
             my $unseen = $imap->unseen_count($folder);
     
-            if ( $status_of && exists $status_of->{$folder_name} ) {
-                $status_of->{$folder_name}->count($count);
-                $status_of->{$folder_name}->unseen($unseen);
+            my $new_status = App::backimap::Status::Folder->new(
+                count => $count,
+                unseen => $unseen,
+            );
+
+            if ( !$status_of ) {
+                $self->status->folder({ $folder_name => $new_status });
+                $status_of = $self->status->folder;
+            }
+            elsif ( !exists $status_of->{$folder_name} ) {
+                $status_of->{$folder_name} = $new_status;
             }
             else {
-                my $new_status = App::backimap::Status::Folder->new(
-                    count => $count,
-                    unseen => $unseen,
-                );
-    
-                $self->status->folder({ $folder_name => $new_status });
+                $status_of->{$folder_name}->count($count);
+                $status_of->{$folder_name}->unseen($unseen);
             }
     
             print STDERR " * $folder_name ($unseen/$count)"
