@@ -6,13 +6,34 @@ use warnings;
 use Test::More;
 use Test::Moose;
 
-my $class = 'App::backimap::Status::Folder';
-my @attributes = qw( count unseen name );
+use Test::TestCoverage;
 
-plan tests => 1 + @attributes;
+my $class = 'App::backimap::Status::Folder';
+my %attributes = (
+    count => 0,
+    unseen => 0,
+    name => 'foobar',
+);
+
+plan tests => 4 + (keys %attributes);
 
 use_ok($class);
 
-for my $attr (@attributes) {
+for my $attr (keys %attributes) {
     has_attribute_ok( $class, $attr, "$class has the '$attr' attribute" );
 }
+
+test_coverage($class);
+
+my $folder = $class->new(%attributes);
+
+isa_ok( $folder, $class );
+
+my %meta_attrs = map {
+    my $name = $_->name;
+    $name => $folder->$name
+} $folder->meta->get_all_attributes();
+
+is_deeply( \%meta_attrs, \%attributes, 'attributes and accessors coverage' );
+
+ok_test_coverage($class);

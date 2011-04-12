@@ -99,6 +99,9 @@ sub BUILD {
 
 Save status to storage backend.
 
+Returns true if status has actually a storage and saving was successful
+or false otherwise.
+
 =cut
 
 sub save {
@@ -108,6 +111,8 @@ sub save {
 
     my $json = $self->freeze();
     $self->storage->put( $FILENAME => $json );
+
+    return 1;
 }
 
 1;
