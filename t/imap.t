@@ -34,13 +34,15 @@ my @attributes = ( keys %args, qw(
     client
 ));
 
-plan tests => 4 + @attributes;
+plan tests => 5 + @attributes;
 
 use_ok($class);
 
 for my $attr (@attributes) {
     has_attribute_ok( $class, $attr, "$class has the '$attr' attribute" );
 }
+
+can_ok( $class, 'new', @attributes );
 
 my $Mail_IMAPClient = 'Mail::IMAPClient';
 my $client = Test::MockModule->new($Mail_IMAPClient);

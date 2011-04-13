@@ -15,13 +15,15 @@ my %attributes = (
     name => 'foobar',
 );
 
-plan tests => 4 + (keys %attributes);
+plan tests => 5 + (keys %attributes);
 
 use_ok($class);
 
 for my $attr (keys %attributes) {
     has_attribute_ok( $class, $attr, "$class has the '$attr' attribute" );
 }
+
+can_ok( $class, 'new', keys %attributes );
 
 test_coverage($class);
 

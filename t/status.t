@@ -29,7 +29,7 @@ for my $attr (@attributes) {
     has_attribute_ok( $class, $attr, "$class has the '$attr' attribute" );
 }
 
-can_ok( $class, @methods );
+can_ok( $class, 'new', @methods, @attributes );
 
 test_coverage($class);
 test_coverage_except( $class, qw( BUILD ) );
