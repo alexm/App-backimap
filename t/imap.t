@@ -12,7 +12,7 @@ use Test::MockModule;
 use URI();
 
 my $class = 'App::backimap::IMAP';
-my %attributes = (
+my %args = (
     uri => URI->new('imaps://user:pass@example.com/INBOX'),
     # user => 'user',
     # host => 'example.com',
@@ -24,11 +24,21 @@ my %attributes = (
     # NOTE: client => {} (see mocking below)
 );
 
-plan tests => 4 + (keys %attributes);
+my @attributes = ( keys %args, qw(
+    user
+    host
+    port
+    secure
+    password
+    path
+    client
+));
+
+plan tests => 4 + @attributes;
 
 use_ok($class);
 
-for my $attr (keys %attributes) {
+for my $attr (@attributes) {
     has_attribute_ok( $class, $attr, "$class has the '$attr' attribute" );
 }
 
@@ -39,7 +49,7 @@ $client->mock( new => sub { bless {}, $Mail_IMAPClient } );
 
 test_coverage($class);
 
-my $imap = $class->new(%attributes);
+my $imap = $class->new(%args);
 
 isa_ok( $imap, $class );
 
@@ -51,7 +61,7 @@ my %meta_attrs = map {
 is_deeply(
     \%meta_attrs,
     {
-        %attributes,
+        %args,
         user => 'user',
         host => 'example.com',
         port => 993,

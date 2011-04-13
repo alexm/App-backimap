@@ -9,7 +9,7 @@ use Test::Moose;
 use Test::TestCoverage;
 
 my $class = 'App::backimap::Status';
-my %attributes = (
+my %args = (
     timestamp => 0,
     server => 'server',
     user => 'user',
@@ -17,13 +17,15 @@ my %attributes = (
     # NOTE: storage => undef (via meta), see below
 );
 
+my @attributes = ( keys %args, 'storage' );
+
 my @methods = qw( save );
 
-plan tests => 6 + (keys %attributes);
+plan tests => 6 + @attributes;
 
 use_ok($class);
 
-for my $attr (keys %attributes) {
+for my $attr (@attributes) {
     has_attribute_ok( $class, $attr, "$class has the '$attr' attribute" );
 }
 
@@ -33,7 +35,7 @@ test_coverage($class);
 test_coverage_except( $class, qw( BUILD ) );
 
 # new covers BUILD too
-my $status = $class->new(%attributes);
+my $status = $class->new(%args);
 
 isa_ok( $status, $class );
 
@@ -44,8 +46,12 @@ my %meta_attrs = map {
 
 is_deeply(
     \%meta_attrs,
-    # NOTE: storage => undef (via meta), see above
-    { %attributes, storage => undef },
+    {
+        %args,
+
+        # NOTE: storage => undef (via meta), see above
+        storage => undef,
+    },
     'attributes and accessors coverage',
 );
 

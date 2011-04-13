@@ -11,7 +11,7 @@ use Path::Class::Dir();
 
 my $tmp_dir = Path::Class::Dir->new('t/tmp');
 my $class = 'App::backimap::Storage';
-my %attributes = (
+my %args = (
     dir => $tmp_dir,
     init => 1,
     clean => 0,
@@ -20,13 +20,15 @@ my %attributes = (
     # NOTE: _git => Git::Wrapper->new($tmp_dir)
 );
 
+my @attributes = ( keys %args, '_git' );
+
 my @methods = qw( find list get put delete move commit reset pack unpack );
 
-plan tests => 15 + (keys %attributes);
+plan tests => 15 + @attributes;
 
 use_ok($class);
 
-for my $attr (keys %attributes) {
+for my $attr (@attributes) {
     has_attribute_ok( $class, $attr, "$class has the '$attr' attribute" );
 }
 
@@ -34,7 +36,7 @@ can_ok( $class, @methods );
 
 test_coverage($class);
 
-my $storage = $class->new(%attributes);
+my $storage = $class->new(%args);
 
 isa_ok( $storage, $class );
 
@@ -45,8 +47,12 @@ my %meta_attrs = map {
 
 is_deeply(
     \%meta_attrs,
-    # NOTE: _git is a derived attribute
-    { %attributes, _git => Git::Wrapper->new('t/tmp') },
+    {
+        %args,
+
+        # NOTE: _git is a derived attribute
+        _git => Git::Wrapper->new('t/tmp'),
+    },
     'attributes and accessors coverage',
 );
 
