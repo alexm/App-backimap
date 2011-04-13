@@ -206,7 +206,7 @@ Removes files from storage.
 sub delete {
     my $self = shift;
 
-    my @files = map { $self->dir->file($_)->stringify() } @_;
+    my @files = map { "$_" } @_;
 
     $self->_git->rm(@files)
         if @files;
