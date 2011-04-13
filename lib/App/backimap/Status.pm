@@ -4,6 +4,8 @@ package App::backimap::Status;
 use Moose;
 use MooseX::Storage;
 with Storage( 'format' => 'JSON' );
+# Storage prereq
+use JSON::Any();
 
 use English qw( -no_match_vars );
 
