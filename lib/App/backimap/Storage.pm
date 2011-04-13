@@ -18,8 +18,10 @@ has dir => (
     isa => 'Path::Class::Dir',
     required => 1,
     coerce => 1,
-    default => sub { File::HomeDir->my_home . ".backimap" },
+    builder => '_build_dir',
 );
+
+sub _build_dir { return File::HomeDir->my_home . ".backimap" }
 
 =attr init
 

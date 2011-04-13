@@ -38,8 +38,10 @@ has host => (
     is => 'ro',
     isa => 'Str',
     lazy => 1,
-    default => sub { return shift->uri->host },
+    builder => '_build_host',
 );
+
+sub _build_host { return shift->uri->host }
 
 =attr port
 
@@ -53,8 +55,10 @@ has port => (
     is => 'ro',
     isa => 'Int',
     lazy => 1,
-    default => sub { return shift->uri->port },
+    builder => '_build_port',
 );
+
+sub _build_port { return shift->uri->port }
 
 =attr secure
 
@@ -68,8 +72,10 @@ has secure => (
     is => 'ro',
     isa => 'Bool',
     lazy => 1,
-    default => sub { return shift->uri->secure },
+    builder => '_build_secure',
 );
+
+sub _build_secure { return shift->uri->secure }
 
 =attr user
 
@@ -83,8 +89,10 @@ has user => (
     is => 'ro',
     isa => 'Str',
     lazy => 1,
-    default => sub { return ( split /:/, shift->uri->userinfo )[0] },
+    builder => '_build_user',
 );
+
+sub _build_user { return ( split /:/, shift->uri->userinfo )[0] }
 
 =attr password
 
@@ -101,17 +109,19 @@ has password => (
     is => 'ro',
     isa => 'Str',
     lazy => 1,
-    default => sub {
-        my $self = shift;
-
-        my $password = ( split /:/, $self->uri->userinfo )[1];
-        # note that return value must be stringified, hence the .= op
-        $password .= IO::Prompt::prompt( 'Password: ', -te => '*' )
-            unless defined $password;
-
-        return $password;
-    },
+    builder => '_build_password',
 );
+
+sub _build_password {
+    my $self = shift;
+
+    my $password = ( split /:/, $self->uri->userinfo )[1];
+    # note that return value must be stringified, hence the .= op
+    $password .= IO::Prompt::prompt( 'Password: ', -te => '*' )
+        unless defined $password;
+
+    return $password;
+}
 
 =attr path
 
@@ -153,26 +163,28 @@ has client => (
     is => 'ro',
     isa => 'App::backimap::Types::Authenticated',
     lazy => 1,
-    default => sub {
-        my $self = shift;
-
-        require IO::Socket::SSL
-            if $self->secure;
-
-        my $client = Mail::IMAPClient->new(
-            Server   => $self->host,
-            Port     => $self->port,
-            Ssl      => $self->secure,
-            User     => $self->user,
-            Password => $self->password,
-
-            # enable imap uid per folder
-            Uid => 1,
-        );
-
-        return $client;
-    },
+    builder => '_build_client',
 );
+
+sub _build_client {
+    my $self = shift;
+
+    require IO::Socket::SSL
+        if $self->secure;
+
+    my $client = Mail::IMAPClient->new(
+        Server   => $self->host,
+        Port     => $self->port,
+        Ssl      => $self->secure,
+        User     => $self->user,
+        Password => $self->password,
+
+        # enable imap uid per folder
+        Uid => 1,
+    );
+
+    return $client;
+}
 
 # FIXME: URI::imaps does not override secure method with a true value
 #        https://rt.cpan.org/Ticket/Display.html?id=65679
