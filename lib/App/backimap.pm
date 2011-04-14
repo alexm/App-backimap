@@ -143,7 +143,7 @@ has _storage => (
     isa => 'App::backimap::Storage',
 );
 
-=method is_excluded($folder)
+=method is_excluded( $folder )
 
 Returns boolean indicating that $folder is on the excluded list of folders.
 
@@ -156,7 +156,7 @@ sub is_excluded {
     return ! !grep $_ eq $folder, @{ $self->exclude };
 }
 
-=method setup
+=method setup()
 
 Setups storage, IMAP connection and backimap status.
 
@@ -184,7 +184,7 @@ sub setup {
     $self->status($status);
 }
 
-=method backup
+=method backup()
 
 Perform IMAP folder backup recursively.
 
@@ -311,7 +311,7 @@ sub backup {
     }
 }
 
-=method run
+=method run()
 
 Parses command line arguments and starts the program.
 

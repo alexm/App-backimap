@@ -212,7 +212,7 @@ sub delete {
         if @files;
 }
 
-=method move
+=method move( $from, $to )
 
 Renames or moves files and directories from one place to another in storage.
 
@@ -225,7 +225,7 @@ sub move {
     $self->_git->mv( $from, $to );
 }
 
-=method commit($change, [$file] ...)
+=method commit( $change, [$file] ... )
 
 Commits pending storage actions with a description of change.
 If a list of files is provided, only those will be committed.
@@ -245,7 +245,7 @@ sub commit {
     }
 }
 
-=method reset
+=method reset()
 
 Rolls back any storage actions that were performed but not committed.
 Returns storage back to last committed status.

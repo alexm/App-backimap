@@ -96,7 +96,7 @@ sub BUILD {
     }
 }
 
-=method save
+=method save()
 
 Save status to storage backend.
 
