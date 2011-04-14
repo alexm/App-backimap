@@ -70,9 +70,8 @@ has storage => (
 
 my $FILENAME = 'backimap.json';
 
+# Extra status initialization is not documented in POD.
 =for Pod::Coverage BUILD
-
-Extra status initialization is not documented.
 
 =cut
 
