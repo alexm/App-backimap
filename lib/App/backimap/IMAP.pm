@@ -8,6 +8,8 @@ use Mail::IMAPClient();
 use Encode::IMAPUTF7();
 use Encode();
 use URI::Escape();
+use URI::imap();
+use URI::imaps();
 
 =attr uri
 
@@ -17,8 +19,8 @@ a prompt will ask for it if not provided.
 
 =cut
 
-subtype 'URI::imap'  => as Object => where { $_->isa('URI::imap')  };
-subtype 'URI::imaps' => as Object => where { $_->isa('URI::imaps') };
+subtype 'URI::imap'  => as 'Object' => where { $_->isa('URI::imap')  };
+subtype 'URI::imaps' => as 'Object' => where { $_->isa('URI::imaps') };
 
 has uri => (
     is => 'ro',
