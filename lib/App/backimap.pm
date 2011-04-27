@@ -48,6 +48,8 @@ Defaults to: ~/.backimap
 
 =item --clean
 
+=item --resume
+
 =item --verbose
 
 =back
@@ -98,6 +100,13 @@ has clean => (
     isa => 'Bool',
     default => 0,
     documentation => 'Clean up storage if dirty.',
+);
+
+has resume => (
+    is => 'ro',
+    isa => 'Bool',
+    default => 0,
+    documentation => 'Resume previous failed backup.',
 );
 
 has verbose => (
@@ -166,9 +175,10 @@ sub setup {
     my $self = shift;
 
     my $storage = App::backimap::Storage->new(
-        dir   => $self->dir,
-        init  => $self->init,
-        clean => $self->clean,
+        dir    => $self->dir,
+        init   => $self->init,
+        clean  => $self->clean,
+        resume => $self->resume,
     );
     $self->storage($storage);
 

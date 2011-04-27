@@ -47,6 +47,20 @@ has clean => (
     default => 0,
 );
 
+=attr resume
+
+Tells that storage should try to resume from a dirty state:
+preserve previous scheduled files and purge unknown ones
+before performing a commit.
+
+=cut
+
+has resume => (
+    is => 'ro',
+    isa => 'Bool',
+    default => 0,
+);
+
 =attr author
 
 Name of the committing author in local storage.
@@ -89,6 +103,9 @@ has _git => (
     builder => '_build_git',
 );
 
+# This makes sure that git repo is properly initialized
+# before any new file is added. Otherwise it would fail
+# because repo would be dirty.
 sub _build_git {
     my $self = shift;
 
@@ -106,14 +123,25 @@ sub _build_git {
     }
 
     if ( $git->status->is_dirty ) {
-        die "directory $dir is dirty, consider --clean option\n"
-            unless $self->clean;
+        die "directory $dir is dirty, consider --clean or --resume options\n"
+            unless $self->clean or $self->resume;
 
-        _git_reset($git);
+        my @unknown = map { $_->from } $git->status->get("unknown");
 
-        if ( $git->status->is_dirty ) {
-            my @unknown = map { $_->from } $git->status->get("unknown");
-            die "directory $dir still has unknown files: @unknown\n";
+        # --resume takes precedence over --clean
+        if ( $self->resume ) {
+            for my $file (@unknown) {
+                $dir->file($file)->remove();
+            }
+
+            eval { $git->commit( { all => 1, message => 'resume previous backup' } ) }
+                if $git->status->is_dirty;
+        }
+        elsif ( $self->clean ) {
+            _git_reset($git);
+
+            die "directory $dir has unknown files: @unknown\n"
+                if @unknown;
         }
     }
 
@@ -128,6 +156,7 @@ Returns a list of files that are found in storage.
 
 sub find {
     my $self = shift;
+    my $git = $self->_git;
 
     my @found = grep { -f $self->dir->file($_) } @_;
     return @found;
@@ -142,6 +171,7 @@ Returns a list of files in a directory from storage.
 sub list {
     my $self = shift;
     my ($dir) = @_;
+    my $git = $self->_git;
 
     $dir = $self->dir->subdir($dir);
     return unless -d $dir;
@@ -161,6 +191,7 @@ Retrieves file from storage.
 sub get {
     my $self = shift;
     my ($file) = @_;
+    my $git = $self->_git;
 
     return $self->dir->file($file)->slurp();
 }
@@ -174,12 +205,7 @@ Adds files to storage with a text describing the change.
 sub put {
     my $self = shift;
     my %files = @_;
-
-    # This makes sure that git repo is properly initialized
-    # before any new file is added. Otherwise it would fail
-    # because repo would be dirty.
     my $git = $self->_git;
-
     my $dir = $self->dir;
 
     for my $filename ( keys %files ) {
@@ -205,10 +231,11 @@ Removes files from storage.
 
 sub delete {
     my $self = shift;
+    my $git = $self->_git;
 
     my @files = map { "$_" } @_;
 
-    $self->_git->rm(@files)
+    $git->rm(@files)
         if @files;
 }
 
@@ -221,8 +248,9 @@ Renames or moves files and directories from one place to another in storage.
 sub move {
     my $self = shift;
     my ( $from, $to ) = @_;
+    my $git = $self->_git;
 
-    $self->_git->mv( $from, $to );
+    $git->mv( $from, $to );
 }
 
 =method commit( $change, [$file] ... )
@@ -236,12 +264,13 @@ Otherwise all pending actions will be performed.
 sub commit {
     my $self = shift;
     my $change = shift;
+    my $git = $self->_git;
 
     if (@_) {
-        $self->_git->commit( { message => $change }, @_ );
+        $git->commit( { message => $change }, @_ );
     }
     else {
-        $self->_git->commit( { message => $change, all => 1 } );
+        $git->commit( { message => $change, all => 1 } );
     }
 }
 
