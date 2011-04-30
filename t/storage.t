@@ -6,7 +6,6 @@ use warnings;
 use Test::More;
 use Test::Moose;
 
-use Test::TestCoverage;
 use Path::Class::Dir();
 
 my $tmp_dir = Path::Class::Dir->new('t/tmp');
@@ -25,7 +24,7 @@ my @attributes = ( keys %args, '_git' );
 
 my @methods = qw( find list get put delete move commit reset pack unpack );
 
-plan tests => 23 + @attributes;
+plan tests => 22 + @attributes;
 
 use_ok($class);
 
@@ -34,9 +33,6 @@ for my $attr (@attributes) {
 }
 
 can_ok( $class, 'new', @methods, @attributes );
-
-test_coverage($class);
-test_coverage_except( $class, qw( BUILD ) );
 
 {
     my $storage = $class->new(%args);
@@ -119,5 +115,3 @@ test_coverage_except( $class, qw( BUILD ) );
 
     $tmp_dir->rmtree();
 }
-
-ok_test_coverage($class);

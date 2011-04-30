@@ -103,9 +103,6 @@ has _git => (
     builder => '_build_git',
 );
 
-# This makes sure that git repo is properly initialized
-# before any new file is added. Otherwise it would fail
-# because repo would be dirty.
 sub _build_git {
     my $self = shift;
 
@@ -148,6 +145,17 @@ sub _build_git {
     return $git;
 }
 
+=for Pod::Coverage BUILD
+
+=cut
+
+sub BUILD {
+    # This makes sure that git repo is properly initialized
+    # before any new file is added. Otherwise it would fail
+    # because repo would be dirty.
+    shift->_git();
+}
+
 =method find( $file, ... )
 
 Returns a list of files that are found in storage.
@@ -156,7 +164,6 @@ Returns a list of files that are found in storage.
 
 sub find {
     my $self = shift;
-    my $git = $self->_git;
 
     my @found = grep { -f $self->dir->file($_) } @_;
     return @found;
@@ -171,7 +178,6 @@ Returns a list of files in a directory from storage.
 sub list {
     my $self = shift;
     my ($dir) = @_;
-    my $git = $self->_git;
 
     $dir = $self->dir->subdir($dir);
     return unless -d $dir;
@@ -191,7 +197,6 @@ Retrieves file from storage.
 sub get {
     my $self = shift;
     my ($file) = @_;
-    my $git = $self->_git;
 
     return $self->dir->file($file)->slurp();
 }

@@ -6,8 +6,6 @@ use warnings;
 use Test::More;
 use Test::Moose;
 
-use Test::TestCoverage;
-
 my $class = 'App::backimap::Status';
 my %args = (
     timestamp => 0,
@@ -21,7 +19,7 @@ my @attributes = ( keys %args, 'storage' );
 
 my @methods = qw( save );
 
-plan tests => 6 + @attributes;
+plan tests => 5 + @attributes;
 
 use_ok($class);
 
@@ -30,9 +28,6 @@ for my $attr (@attributes) {
 }
 
 can_ok( $class, 'new', @methods, @attributes );
-
-test_coverage($class);
-test_coverage_except( $class, qw( BUILD ) );
 
 # new covers BUILD too
 my $status = $class->new(%args);
@@ -56,5 +51,3 @@ is_deeply(
 );
 
 is( $status->save(), undef, 'save() does nothing w/o storage' );
-
-ok_test_coverage($class);
