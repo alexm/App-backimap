@@ -6,6 +6,8 @@ use warnings;
 use Test::More;
 use Test::Moose;
 
+use Test::TestCoverage;
+
 my $class = 'App::backimap::Status::Folder';
 my %attributes = (
     count => 0,
@@ -13,7 +15,7 @@ my %attributes = (
     name => 'foobar',
 );
 
-plan tests => 4 + (keys %attributes);
+plan tests => 5 + (keys %attributes);
 
 use_ok($class);
 
@@ -22,6 +24,8 @@ for my $attr (keys %attributes) {
 }
 
 can_ok( $class, 'new', keys %attributes );
+
+test_coverage($class);
 
 my $folder = $class->new(%attributes);
 
@@ -33,3 +37,5 @@ my %meta_attrs = map {
 } $folder->meta->get_all_attributes();
 
 is_deeply( \%meta_attrs, \%attributes, 'attributes and accessors coverage' );
+
+ok_test_coverage($class);
