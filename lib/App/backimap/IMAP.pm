@@ -1,3 +1,6 @@
+use strict;
+use warnings;
+
 package App::backimap::IMAP;
 # ABSTRACT: manages IMAP connections
 

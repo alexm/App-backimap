@@ -1,3 +1,6 @@
+use strict;
+use warnings;
+
 package App::backimap;
 # ABSTRACT: backups imap mail
 
@@ -7,9 +10,6 @@ package App::backimap;
     App::backimap->new_with_options()->run();
 
 =cut
-
-use strict;
-use warnings;
 
 use Moose;
 with 'MooseX::Getopt';

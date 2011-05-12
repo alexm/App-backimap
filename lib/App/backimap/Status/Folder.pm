@@ -1,3 +1,6 @@
+use strict;
+use warnings;
+
 package App::backimap::Status::Folder;
 # ABSTRACT: backimap folder status
 
