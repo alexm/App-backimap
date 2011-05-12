@@ -151,8 +151,8 @@ sub _build_git {
 
 sub BUILD {
     # This makes sure that git repo is properly initialized
-    # before any new file is added. Otherwise it would fail
-    # because repo would be dirty.
+    # before returning successfully from new() constructor.
+
     shift->_git();
 }
 

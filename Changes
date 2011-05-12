@@ -1,3 +1,13 @@
+0.00_11    2011-05-10
+
+ - Replace attribute defaults by builder subs.
+ - Fix deletion of files from storage.
+ - Improve test coverage.
+ - Add explicit prereq for URI::imap and URI::imaps.
+ - Update Changes test in dist.ini.
+ - Add suport for resuming failed backups.
+ - Check storage status before connecting to IMAP server.
+
 0.00_10    2011-04-13
 
  - Fix explicit prereq for JSON::Any (thanks to CPAN testers).

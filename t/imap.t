@@ -6,6 +6,7 @@ use warnings;
 use Test::More;
 use Test::Moose;
 
+use Test::TestCoverage;
 use Test::MockModule;
 
 use URI();
@@ -33,7 +34,7 @@ my @attributes = ( keys %args, qw(
     client
 ));
 
-plan tests => 4 + @attributes;
+plan tests => 5 + @attributes;
 
 use_ok($class);
 
@@ -47,6 +48,8 @@ my $Mail_IMAPClient = 'Mail::IMAPClient';
 my $client = Test::MockModule->new($Mail_IMAPClient);
 $client->mock( IsAuthenticated => sub { 1 } );
 $client->mock( new => sub { bless {}, $Mail_IMAPClient } );
+
+test_coverage($class);
 
 my $imap = $class->new(%args);
 
@@ -73,3 +76,5 @@ is_deeply(
     },
     'attributes and accessors coverage',
 );
+
+ok_test_coverage($class);
