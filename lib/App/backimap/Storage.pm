@@ -293,10 +293,9 @@ sub reset {
     _git_reset( shift->_git );
 }
 
+# Required methods in status for MooseX::Storage that don't perform any action
+# since the storage backend does not support serialization.
 =for Pod::Coverage pack unpack
-
-Required methods in status for MooseX::Storage that don't perform any action
-since the storage backend does not support serialization.
 
 =cut
 
