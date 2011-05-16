@@ -50,6 +50,8 @@ Defaults to: ~/.backimap
 
 =item --resume
 
+=item --incremental
+
 =item --verbose
 
 =back
@@ -107,6 +109,13 @@ has resume => (
     isa => 'Bool',
     default => 0,
     documentation => 'Resume previous failed backup.',
+);
+
+has incremental => (
+    is => 'ro',
+    isa => 'Bool',
+    default => 0,
+    documentation => 'Perform an incremental backup since last time.',
 );
 
 has verbose => (
@@ -249,16 +258,24 @@ sub backup {
                 }
             }
 
+            $imap->examine($folder);
+            my @messages = $self->incremental
+                         ? $imap->since( $self->status->timestamp )
+                         : $imap->messages
+                         ;
+
+            my $msg_count = @messages;
+
             my $progress_update = 0;
             my $progress;
 
             if ( $self->verbose ) {
-                my $text = " * $folder_name ($unseen/$count)";
+                my $text = " * $folder_name ($msg_count/$unseen/$count)";
 
-                if ( $count > 0 ) {
+                if ( $msg_count > 0 ) {
                     $progress = Term::ProgressBar->new({
                         name => $text,
-                        count => $count,
+                        count => $msg_count,
                         ETA => 'linear',
                         fh => \*STDERR,
                         remove => 0,
@@ -270,18 +287,20 @@ sub backup {
             }
 
             $progress->update($progress_update++)
-                if $self->verbose && $count > 0;
+                if $self->verbose && $msg_count > 0;
     
             # list of potential files to purge
-            my %purge = map { $_ => 1 } $storage->list($folder_name);
+            my %purge;
+            %purge = map { $_ => 1 } $storage->list($folder_name)
+                unless $self->incremental;
     
-            $imap->examine($folder);
-            for my $msg ( $imap->messages ) {
+            for my $msg (@messages) {
                 $progress->update($progress_update++)
                     if $self->verbose;
 
                 # do not purge if still present in server
-                delete $purge{$msg};
+                delete $purge{$msg}
+                    unless $self->incremental;
     
                 my $file = file( $folder_name, $msg );
                 next if $storage->find($file);
@@ -290,10 +309,10 @@ sub backup {
                 $storage->put( "$file" => $fetch->[2] );
             }
 
-            $progress->update($count)
-                if $self->verbose && $count > 0;
+            $progress->update($msg_count)
+                if $self->verbose && $msg_count > 0;
     
-            if (%purge) {
+            if ( !$self->incremental && %purge ) {
                 local $, = q{ };
                 print STDERR " (", keys %purge, ")"
                     if $self->verbose;
