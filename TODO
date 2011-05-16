@@ -1,8 +1,6 @@
 TODO
 ====
 
-* Add an option to resume from a previous failed backup.
-* Check storage status before connecting to IMAP server.
 * Update messages that have changed in IMAP server.
 * Extract message MIME parts, headers and IMAP flags.
 * Export messages to standard format (e.g. mbox, Maildir)
