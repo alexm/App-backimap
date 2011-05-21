@@ -88,7 +88,12 @@ sub BUILD {
     }
     else {
         my $json = $self->storage->get($FILENAME);
-        my $status = App::backimap::Status->thaw($json);
+        my $status = App::backimap::Status->thaw(
+            $json,
+
+            # Do not check package version (fails for alpha releases)
+            check_version => '',
+        );
 
         die "IMAP credentials do not match saved status\n"
             if $status->user ne $self->user ||
