@@ -1,3 +1,10 @@
+0.00_12    2011-05-21
+
+ - Add prereq Git::Wrapper version 0.014 for issue #8.
+ - Add prereq Test::TestCoverage version 0.11 for CPAN #67862.
+ - Add --incremental backup option.
+ - Update TODO.
+
 0.00_11    2011-05-10
 
  - Replace attribute defaults by builder subs.
