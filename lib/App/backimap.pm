@@ -52,6 +52,8 @@ Defaults to: ~/.backimap
 
 =item --incremental
 
+=item --explode
+
 =item --verbose
 
 =back
@@ -116,6 +118,13 @@ has incremental => (
     isa => 'Bool',
     default => 0,
     documentation => 'Perform an incremental backup since last time.',
+);
+
+has explode => (
+    is => 'ro',
+    isa => 'Bool',
+    default => 0,
+    documentation => 'Explode message MIME parts (e.g. attachments).',
 );
 
 has verbose => (
@@ -306,7 +315,8 @@ sub backup {
                 next if $storage->find($file);
     
                 my $fetch = $imap->fetch( $msg, 'RFC822' );
-                $storage->put( "$file" => $fetch->[2] );
+                my $op = $self->explode ? 'explode' : 'put';
+                $storage->$op( "$file" => $fetch->[2] );
             }
 
             $progress->update($msg_count)

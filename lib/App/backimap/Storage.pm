@@ -9,6 +9,9 @@ use Moose::Util::TypeConstraints;
 use MooseX::Types::Path::Class;
 use File::HomeDir;
 use Git::Wrapper;
+use IO::Scalar;
+use MIME::Parser;
+use Storable;
 
 =attr dir
 
@@ -168,7 +171,7 @@ Returns a list of files that are found in storage.
 sub find {
     my $self = shift;
 
-    my @found = grep { -f $self->dir->file($_) } @_;
+    my @found = grep { -e $self->dir->file($_) } @_;
     return @found;
 }
 
@@ -206,27 +209,72 @@ sub get {
 
 =method put( $file => $content, ... )
 
-Adds files to storage with a text describing the change.
+Adds files to storage.
 
 =cut
 
 sub put {
     my $self = shift;
-    my %files = @_;
-    my $git = $self->_git;
-    my $dir = $self->dir;
 
-    for my $filename ( keys %files ) {
-        my $filepath = $dir->file($filename);
+    my $op = sub {
+        my $self = shift;
+        my ( $filename, $content_ref ) = @_;
+
+        my $filepath = $self->dir->file($filename);
         $filepath->dir->mkpath()
             unless -d $filepath->dir;
 
-        my $file = $filepath->open('w')
+        my $file = $filepath->openw('w')
             or die "cannot open $filepath: $!";
 
-        $file->print( $files{$filename} );
+        $file->print($$content_ref);
         $file->close();
+    };
 
+    $self->_put_files( $op, @_ );
+}
+
+=method explode( $dir => $content, ... )
+
+Explodes content MIME parts in several files and adds them to storage.
+
+=cut
+
+sub explode {
+    my $self = shift;
+
+    my $op = sub {
+        my $self = shift;
+        my ( $dir, $content_ref ) = @_;
+
+        my $filepath = $self->dir->subdir($dir);
+        $filepath->mkpath()
+            unless -d $filepath;
+
+        my $parser = MIME::Parser->new();
+        $parser->output_dir($filepath);
+        $parser->decode_bodies(1);
+        $parser->extract_nested_messages(1);
+        $parser->extract_uuencode(1);
+        $parser->ignore_errors(1);
+
+        my $entity = $parser->parse( IO::Scalar->new($content_ref) );
+
+        my $filename = $filepath->file('__MIME__');
+        Storable::nstore( $entity, $filename )
+            or die "cannot open $filename: $!";
+    };
+
+    $self->_put_files( $op, @_ );
+}
+
+sub _put_files {
+    my $self = shift;
+    my ( $op, %content_for ) = @_;
+    my $git = $self->_git;
+
+    for my $filename ( keys %content_for ) {
+        $self->$op( $filename, \$content_for{$filename} );
         $git->add($filename);
     }
 }

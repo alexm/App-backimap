@@ -25,7 +25,7 @@ my @attributes = ( keys %args, '_git' );
 
 my @methods = qw( find list get put delete move commit reset pack unpack );
 
-plan tests => 23 + @attributes;
+plan tests => 26 + @attributes;
 
 use_ok($class);
 
@@ -116,6 +116,26 @@ test_coverage_except( $class, qw( BUILD ) );
     my $other_storage = $class->new( %args, init => 0, resume => 1 );
     isa_ok( $other_storage, $class );
     is_deeply( [ $other_storage->find('unknown') ], [], 'list after resume without unknown' );
+
+    $tmp_dir->rmtree();
+}
+
+{
+    # explode a trivial MIME content
+    my $storage = $class->new(%args);
+    isa_ok( $storage, $class );
+    my $text = "Hello, world!";
+    $storage->explode( mime => <<"EOF" );
+Content-Type: text/plain; charset=US-ASCII; name="hello.txt"
+
+$text
+EOF
+    is_deeply(
+        [ sort $storage->list("/mime") ],
+        [ sort '__MIME__', 'hello.txt' ],
+        'list after explode MIME',
+    );
+    is( $storage->get('/mime/hello.txt'), "$text\n", 'get exploded MIME content' );
 
     $tmp_dir->rmtree();
 }
