@@ -11,6 +11,7 @@ use File::HomeDir;
 use Git::Wrapper;
 use IO::Scalar;
 use MIME::Parser;
+use Encode;
 use Storable;
 
 =attr dir
@@ -252,7 +253,7 @@ sub explode {
             unless -d $filepath;
 
         my $parser = MIME::Parser->new();
-        $parser->output_dir($filepath);
+        $parser->output_dir( Encode::decode( 'UTF-8', $filepath ) );
         $parser->decode_bodies(1);
         $parser->extract_nested_messages(1);
         $parser->extract_uuencode(1);
