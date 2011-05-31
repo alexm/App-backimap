@@ -9,6 +9,7 @@ use MooseX::Storage;
 with Storage( 'format' => 'JSON' );
 # Storage prereq
 use JSON::Any();
+use version();
 
 use English qw( -no_match_vars );
 
@@ -88,13 +89,13 @@ sub BUILD {
     }
     else {
         my $json = $self->storage->get($FILENAME);
-        my $status = App::backimap::Status->thaw(
-            $json,
 
-            # Do not check package version (fails for alpha releases)
-            check_version => '',
-        );
+        # Do not check package if version is alpha (CPAN: #68358)
+        my %options;
+        %options = ( check_version => '' )
+            if version->parse( $self->VERSION )->is_alpha();
 
+        my $status = App::backimap::Status->thaw( $json, %options );
         die "IMAP credentials do not match saved status\n"
             if $status->user ne $self->user ||
                 $status->server ne $self->server;
