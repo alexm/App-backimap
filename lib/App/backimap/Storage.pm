@@ -225,7 +225,7 @@ sub put {
         $filepath->dir->mkpath()
             unless -d $filepath->dir;
 
-        my $file = $filepath->openw('w')
+        my $file = $filepath->open('w')
             or die "cannot open $filepath: $!";
 
         $file->print($$content_ref);
