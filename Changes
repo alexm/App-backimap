@@ -1,3 +1,8 @@
+0.00_13    2011-06-02
+
+ - Ignore package version from stored statuses per CPAN: #68358.
+ - Add --explode for MIME parts and headers.
+
 0.00_12    2011-05-21
 
  - Add prereq Git::Wrapper version 0.014 for issue #8.
