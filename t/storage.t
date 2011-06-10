@@ -94,7 +94,7 @@ test_coverage_except( $class, qw( BUILD ) );
     # resume previous scheduled operation
     my $other_storage = $class->new( %args, init => 0, resume => 1 );
     isa_ok( $other_storage, $class );
-    is_deeply( [ $other_storage->find('failed') ], [ 'failed' ], 'list after resume' );
+    is_deeply( [ $other_storage->find('failed') ], [ 'failed' ], 'find after resume' );
     is( $other_storage->get('failed'), 'failed content', 'get after resume' );
 
     $tmp_dir->rmtree();
@@ -112,10 +112,10 @@ test_coverage_except( $class, qw( BUILD ) );
     $fh->close;
     ok( -f $file4, 'unknown created but not scheduled' );
 
-    # test previous failed simulation
+    # resume previous failed simulation
     my $other_storage = $class->new( %args, init => 0, resume => 1 );
     isa_ok( $other_storage, $class );
-    is_deeply( [ $other_storage->find('unknown') ], [], 'list after resume without unknown' );
+    is_deeply( [ $other_storage->find('unknown') ], [], 'find after resume without unknown' );
 
     $tmp_dir->rmtree();
 }
