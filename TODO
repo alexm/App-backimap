@@ -1,7 +1,10 @@
 TODO
 ====
 
-* Extract message MIME parts, headers and IMAP flags.
+* Preserve IMAP flags.
 * Export messages to standard format (e.g. mbox, Maildir)
 * Add support for pushing messages to an IMAP server.
 * Add an IMAP server interface.
+* Add a dry run mode that only shows a summary.
+* Add support for config files.
+
