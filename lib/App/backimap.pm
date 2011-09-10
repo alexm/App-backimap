@@ -24,6 +24,7 @@ use Try::Tiny;
 use Encode::IMAPUTF7();
 use Encode();
 use Path::Class qw( file );
+use File::HomeDir;
 use URI();
 use Data::Dump();
 use Term::ProgressBar();
@@ -90,6 +91,7 @@ has dir => (
     isa => 'Path::Class::Dir',
     coerce => 1,
     documentation => 'Path to storage (default: ~/.backimap)',
+    default => sub { File::HomeDir->my_home . "/.backimap" },
 );
 
 has init => (

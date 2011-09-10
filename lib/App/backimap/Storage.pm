@@ -7,7 +7,6 @@ package App::backimap::Storage;
 use Moose;
 use Moose::Util::TypeConstraints;
 use MooseX::Types::Path::Class;
-use File::HomeDir;
 use Git::Wrapper;
 use IO::Scalar;
 use MIME::Parser;
@@ -16,7 +15,7 @@ use Storable;
 
 =attr dir
 
-Sets pathname to the storage (defaults to ~/.backimap).
+Sets pathname to the storage.
 
 =cut
 
@@ -25,10 +24,7 @@ has dir => (
     isa => 'Path::Class::Dir',
     required => 1,
     coerce => 1,
-    builder => '_build_dir',
 );
-
-sub _build_dir { return File::HomeDir->my_home . ".backimap" }
 
 =attr init
 
