@@ -1,2 +1,3 @@
-App-backimap-*
-.build
+/App-backimap-*
+/.build
+/local/
