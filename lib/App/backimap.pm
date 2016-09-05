@@ -4,13 +4,6 @@ use warnings;
 package App::backimap;
 # ABSTRACT: backups imap mail
 
-=head1 SYNOPSIS
-
-    use App::backimap;
-    App::backimap->new_with_options()->run();
-
-=cut
-
 use Moose;
 with 'MooseX::Getopt';
 
@@ -28,6 +21,11 @@ use File::HomeDir;
 use URI();
 use Data::Dump();
 use Term::ProgressBar();
+
+=head1 SYNOPSIS
+
+    use App::backimap;
+    App::backimap->new_with_options()->run();
 
 =head1 OPTIONS
 
