@@ -18,7 +18,7 @@ my %args = (
     resume => 0,
     author => 'me',
     email => 'me@me.me',
-    # NOTE: _git => Git::Wrapper->new($tmp_dir)
+    # NOTE: _git is a derived attribute
 );
 
 my @attributes = ( keys %args, '_git' );
@@ -41,6 +41,10 @@ test_coverage_except( $class, qw( BUILD ) );
 {
     my $storage = $class->new(%args);
 
+    # NOTE: build a new object with err/out
+    my $git = Git::Wrapper->new('t/tmp');
+    $git->reset();
+
     isa_ok( $storage, $class );
 
     my %meta_attrs = map {
@@ -54,7 +58,7 @@ test_coverage_except( $class, qw( BUILD ) );
             %args,
 
             # NOTE: _git is a derived attribute
-            _git => Git::Wrapper->new('t/tmp'),
+            _git => $git,
         },
         'attributes and accessors coverage',
     );
