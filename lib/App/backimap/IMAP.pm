@@ -191,10 +191,4 @@ sub _build_client {
     return $client;
 }
 
-# FIXME: URI::imaps does not override secure method with a true value
-#        https://rt.cpan.org/Ticket/Display.html?id=65679
-package URI::imaps;
-
-sub secure { 1 }
-
 1;
